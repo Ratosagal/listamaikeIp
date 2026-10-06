@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Vigília — Sobreviva junto</title>
+  </head>
+  <body>
+    <canvas id="world"></canvas>
+    <div id="hud">
+      <header>
+        <div class="brand">◈ VIGÍLIA <small>SOBREVIVA JUNTO</small></div>
+        <div id="clock"></div>
+        <button id="pause">Ⅱ PAUSA</button>
+      </header>
+      <div class="left">
+        <div class="label">EXPLORADOR</div>
+        <div class="bar"><i id="health"></i></div>
+        <div id="companion"></div>
+        <button id="manageButton">GERENCIAR CRIATURAS</button>
+      </div>
+      <div class="mission">
+        <span class="label">PRÓXIMA HORDA</span><strong id="horde"></strong
+        ><small>Construa. Prepare. Proteja.</small>
+      </div>
+      <div id="notice"></div>
+      <div id="hint"></div>
+      <div id="reticle">+</div>
+      <footer>
+        <div id="inventory"></div>
+        <div class="slots">
+          <button data-weapon="sword">1 / ESPADA</button
+          ><button data-weapon="bow">2 / ARCO</button
+          ><button data-weapon="gun">3 / PISTOLA</button
+          ><button id="craftButton">C / FABRICAR</button
+          ><button id="buildButton">B / CONSTRUIR</button>
+        </div>
+        <small
+          >WASD mover · mouse câmera · clique atacar · E interagir · Q capturar
+          · R reanimar · Esc soltar mouse</small
+        >
+      </footer>
+    </div>
+    <section id="menu" class="overlay">
+      <div class="intro">
+        <span class="eyebrow">UM MUNDO HOSTIL. UMA AMIZADE IMPROVÁVEL.</span>
+        <h1>VIGÍLIA<span>Sobreviva junto.</span></h1>
+        <p>
+          A cidade caiu. Seus companheiros ainda lutam.<br />Explore as ruínas,
+          capture criaturas e erga seu refúgio antes da quinta noite.
+        </p>
+        <button id="play" class="primary">ENTRAR NA CIDADE →</button>
+        <p class="fine">
+          Protótipo 3D · um jogador · salva automaticamente neste navegador<br />Use
+          teclado e mouse. Clique no cenário para controlar a câmera.
+        </p>
+        <button id="reset">Apagar progresso local</button>
+      </div>
+    </section>
+    <section id="panel" class="hidden"></section>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
