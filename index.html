@@ -3,31 +3,61 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#101b21" />
+    <meta
+      name="description"
+      content="Vigília: sobrevivência 3D com criaturas, construção livre e hordas de zumbis."
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Vigília — Sobreviva junto</title>
   </head>
   <body>
-    <canvas id="world"></canvas>
-    <div id="hud">
+    <canvas id="world" aria-label="Mundo 3D de Vigília"></canvas>
+    <div id="damage" aria-hidden="true"></div>
+    <div id="feedback" aria-hidden="true"></div>
+    <div id="hud" class="hidden">
       <header>
         <div class="brand">◈ VIGÍLIA <small>SOBREVIVA JUNTO</small></div>
         <div id="clock"></div>
-        <button id="pause">Ⅱ PAUSA</button>
+        <div class="header-actions">
+          <button id="settingsButton" aria-label="Configurações">⚙</button
+          ><button id="helpButton" aria-label="Ajuda e controles">?</button
+          ><button id="pause">Ⅱ PAUSA</button>
+        </div>
       </header>
       <div class="left">
-        <div class="label">EXPLORADOR</div>
-        <div class="bar"><i id="health"></i></div>
-        <div id="companion"></div>
-        <button id="manageButton">GERENCIAR CRIATURAS</button>
+        <div class="card player-card">
+          <div class="card-heading">
+            <span class="label">EXPLORADOR</span
+            ><strong id="healthValue">100 / 100</strong>
+          </div>
+          <div
+            class="bar"
+            role="progressbar"
+            aria-label="Vida do jogador"
+            aria-valuemin="0"
+            aria-valuemax="100"
+          >
+            <i id="health"></i>
+          </div>
+          <div id="protection"></div>
+        </div>
+        <div class="card creature-card">
+          <div id="companion"></div>
+          <button id="manageButton">GERENCIAR CRIATURAS <span>↗</span></button>
+        </div>
       </div>
-      <div class="mission">
-        <span class="label">PRÓXIMA HORDA</span><strong id="horde"></strong
-        ><small>Construa. Prepare. Proteja.</small>
+      <div class="mission card">
+        <span class="label">A CIDADE NÃO DORME</span><strong id="horde"></strong
+        ><small id="hordeDetail">Uma horda a cada cinco dias.</small>
+        <div id="objective"></div>
       </div>
-      <div id="notice"></div>
+      <div id="notice" role="status" aria-live="polite"></div>
       <div id="hint"></div>
-      <div id="reticle">+</div>
+      <div id="reticle" aria-hidden="true"><span></span></div>
+      <div id="targetInfo"></div>
       <footer>
-        <div id="inventory"></div>
+        <div id="inventory" aria-label="Inventário da companheira"></div>
         <div class="slots">
           <button data-weapon="sword">1 / ESPADA</button
           ><button data-weapon="bow">2 / ARCO</button
@@ -35,29 +65,114 @@
           ><button id="craftButton">C / FABRICAR</button
           ><button id="buildButton">B / CONSTRUIR</button>
         </div>
-        <small
-          >WASD mover · mouse câmera · clique atacar · E interagir · Q capturar
-          · R reanimar · Esc soltar mouse</small
+        <small id="controlHint"
+          >WASD mover · Shift correr · mouse câmera · clique atacar · E
+          interagir · Q capturar · R reanimar · F reparar · Esc pausa</small
         >
       </footer>
     </div>
     <section id="menu" class="overlay">
-      <div class="intro">
-        <span class="eyebrow">UM MUNDO HOSTIL. UMA AMIZADE IMPROVÁVEL.</span>
-        <h1>VIGÍLIA<span>Sobreviva junto.</span></h1>
-        <p>
-          A cidade caiu. Seus companheiros ainda lutam.<br />Explore as ruínas,
-          capture criaturas e erga seu refúgio antes da quinta noite.
-        </p>
-        <button id="play" class="primary">ENTRAR NA CIDADE →</button>
-        <p class="fine">
-          Protótipo 3D · um jogador · salva automaticamente neste navegador<br />Use
-          teclado e mouse. Clique no cenário para controlar a câmera.
-        </p>
-        <button id="reset">Apagar progresso local</button>
+      <div class="menu-grid">
+        <div class="intro">
+          <span class="eyebrow"><i></i> SOBREVIVÊNCIA / UM JOGADOR</span>
+          <h1>VIGÍLIA<span>Sobreviva junto.</span></h1>
+          <p>A cidade caiu.<br />Uma pequena chama ainda resiste.</p>
+          <div class="menu-actions">
+            <button id="play" class="primary">
+              ENTRAR NA CIDADE <span>→</span></button
+            ><button id="newGame">NOVA EXPEDIÇÃO</button>
+            <div class="menu-secondary">
+              <button id="menuSettings">CONFIGURAÇÕES</button
+              ><button id="menuHelp">COMO JOGAR</button>
+            </div>
+          </div>
+          <p class="fine" id="saveInfo">
+            Seu progresso fica neste navegador. Teclado e mouse / WebGL.
+          </p>
+          <button id="reset">Apagar progresso local</button>
+        </div>
+        <aside class="field-notes">
+          <div class="note-top">ARQUIVO DE CAMPO <span>01 / BRASA</span></div>
+          <svg
+            viewBox="0 0 280 230"
+            aria-label="Brasa, sua companheira de fogo"
+            role="img"
+          >
+            <circle
+              cx="140"
+              cy="120"
+              r="92"
+              fill="none"
+              stroke="#c3d59d"
+              opacity=".2"
+            />
+            <circle
+              cx="140"
+              cy="120"
+              r="73"
+              fill="none"
+              stroke="#c3d59d"
+              opacity=".1"
+            />
+            <path d="M175 168Q257 188 232 121Q208 156 176 140" fill="#cc784b" />
+            <ellipse cx="135" cy="156" rx="49" ry="45" fill="#d68b58" />
+            <path
+              d="M93 112L88 43L122 80M151 80L181 43L180 116"
+              fill="#e29c61"
+            />
+            <path d="M97 91L96 64L114 86M159 87L175 63L174 94" fill="#713f40" />
+            <ellipse cx="136" cy="111" rx="49" ry="38" fill="#e8a968" />
+            <path
+              d="M107 124Q137 103 164 124Q153 152 136 146Q117 147 107 124"
+              fill="#f5d9a5"
+            />
+            <ellipse cx="116" cy="109" rx="6" ry="8" fill="#253a36" />
+            <ellipse cx="156" cy="109" rx="6" ry="8" fill="#253a36" />
+            <circle cx="114" cy="106" r="2" fill="#fff" />
+            <circle cx="154" cy="106" r="2" fill="#fff" />
+            <path d="M130 124L142 124L136 132Z" fill="#513e3b" />
+            <ellipse cx="111" cy="193" rx="16" ry="9" fill="#e8a968" />
+            <ellipse cx="159" cy="193" rx="16" ry="9" fill="#e8a968" /></svg
+          ><span class="label">COMPANHEIRA / FOGO</span>
+          <h2>Pequena. Nunca indefesa.</h2>
+          <p>
+            Capture aliados. Erga um refúgio.<br />Prepare-se para a quinta
+            madrugada.
+          </p>
+          <div class="note-bottom">
+            <span>☷ CONSTRUA LIVREMENTE</span><span>◈ PROTEJA SUA BASE</span>
+          </div>
+        </aside>
+      </div>
+      <div class="menu-bottom">
+        <span>VALE CINZENTO / EXPEDIÇÃO 01</span
+        ><span>CRIATURAS ORIGINAIS · SEM FOME OU SEDE</span>
       </div>
     </section>
-    <section id="panel" class="hidden"></section>
+    <section
+      id="panel"
+      class="hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Ações do jogador"
+      tabindex="-1"
+    ></section>
+    <section
+      id="modal"
+      class="overlay hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modalTitle"
+    >
+      <div class="dialog" id="modalBody"></div>
+    </section>
+    <div id="unsupported" class="hidden">
+      <h2>Não foi possível iniciar o mundo 3D.</h2>
+      <p>
+        Este jogo precisa de WebGL em um navegador atualizado com aceleração
+        gráfica. Tente outro navegador ou ative a aceleração nas configurações.
+      </p>
+    </div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

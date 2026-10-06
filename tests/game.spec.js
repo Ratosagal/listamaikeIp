@@ -1,5 +1,12 @@
 import { test, expect } from "@playwright/test";
 async function start(page, seed) {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem("vigilia-settings"))
+      localStorage.setItem(
+        "vigilia-settings",
+        JSON.stringify({ quality: "low", music: 0, effects: 0 }),
+      );
+  });
   if (seed)
     await page.addInitScript((s) => {
       if (!localStorage.getItem("vigilia-v1"))
@@ -9,6 +16,7 @@ async function start(page, seed) {
   await page.waitForFunction(() => window.vigilia?.ready);
   await page.locator("#play").click();
   await page.evaluate(() => document.exitPointerLock());
+  await page.waitForFunction(() => !document.pointerLockElement);
 }
 const seed = () => ({
   time: 0,
@@ -65,6 +73,7 @@ test("renders, moves, crafts, constructs and persists", async ({ page }) => {
     1,
   );
   await page.evaluate(() => document.exitPointerLock());
+  await page.waitForFunction(() => !document.pointerLockElement);
   await page.locator("#pause").click();
   await page.reload();
   await page.waitForFunction(() => window.vigilia?.ready);
@@ -105,6 +114,9 @@ test("death returns incapacitated companion and preserves inventory", async ({
   expect(actual.creatures[0].x).toBe(2);
   expect(actual.creatures[0].hp).toBe(0);
   expect(actual.inventory).toEqual(s.inventory);
+  await page.getByRole("button", { name: "Retomar na base" }).click();
+  await page.evaluate(() => document.exitPointerLock());
+  await page.waitForFunction(() => !document.pointerLockElement);
   await page.keyboard.press("KeyR");
   expect(await page.evaluate(() => vigilia.snapshot().creatures[0].hp)).toBe(
     100,
@@ -116,6 +128,7 @@ test("weakens and captures a wild creature with a crafted capsule", async ({
 }) => {
   const s = seed();
   s.player = { x: -16.5, z: -32.8 };
+  s.zombieSnapshot = [];
   s.creatures[0].hp = 0;
   await start(page, s);
   await page.keyboard.press("KeyC");
@@ -125,6 +138,7 @@ test("weakens and captures a wild creature with a crafted capsule", async ({
     const time = await page.evaluate(() => vigilia.snapshot().time);
     await page.locator("#world").click({ position: { x: 640, y: 360 } });
     await page.evaluate(() => document.exitPointerLock());
+    await page.waitForFunction(() => !document.pointerLockElement);
     await expect
       .poll(() => page.evaluate(() => vigilia.snapshot().time))
       .toBeGreaterThan(time + 0.7);
