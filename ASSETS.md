@@ -1,7 +1,8 @@
 # Origem dos recursos
 
-Todos os personagens, criaturas, construções, veículos, vegetação, montanhas, ícones SVG e efeitos visuais deste projeto são originais e construídos por código. Nenhum modelo, personagem, nome de criatura ou recurso gráfico de Pokémon, Palworld ou Project Zomboid foi usado.
+Todos os personagens, criaturas, construções, veículos, vegetação, montanhas, ícones SVG e efeitos visuais deste projeto são originais e construídos por código. Nenhum modelo, personagem, nome de criatura ou recurso gráfico de Pokémon, Palworld, Project Zomboid ou Attack on Titan foi usado.
 
+- Colossos originais e animações de impacto: `src/systems/colossi.js`. Cabos e física de manobra: `src/systems/aerial.js`.
 - Modelos e animações: `src/main.js` (geometria Three.js).
 - Arte do menu: SVG original em `index.html`; favicon em `public/favicon.svg`.
 - Textura de terreno, vegetação instanciada e objetos de cenário: `src/systems/scenery.js`. A textura é desenhada em um canvas local.

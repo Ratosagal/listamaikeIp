@@ -1,5 +1,7 @@
 import * as THREE from "three";
 import "./style.css";
+import { AerialRig } from "./systems/aerial.js";
+import { Colossi } from "./systems/colossi.js";
 import { Soundscape } from "./systems/audio.js";
 import { Feedback } from "./systems/effects.js";
 import { dressWorld } from "./systems/scenery.js";
@@ -286,7 +288,7 @@ function house(x, z, w, d, h) {
     box(0.06, 1.5, 1.3, 0x1c3034, g, w / 2 + 0.04, 2.7, a * d * 0.25);
   }
   box(1.5, 2.7, 0.07, 0x263331, g, 0, 1.35, d / 2 + 0.05);
-  solid.push({ x, z, w, d });
+  solid.push({ x, z, w, d, h });
   for (let floor = 2.7; floor < h - 1; floor += 2.8) {
     for (let col = -w * 0.32; col < w * 0.4; col += 2.7) {
       box(1.4, 1.6, 0.12, 0x243b43, g, col, floor, d / 2 + 0.07);
@@ -600,7 +602,17 @@ for (const z of zombies)
     z.homeX = z.x;
     z.homeZ = z.z;
   }
-if (blocked(state.player.x, state.player.z))
+state.player.y = Math.min(80, Math.max(0, Number(state.player.y) || 0));
+if (
+  blocked(state.player.x, state.player.z) &&
+  !solid.some(
+    (b) =>
+      b.h &&
+      state.player.y >= b.h &&
+      Math.abs(state.player.x - b.x) < b.w / 2 &&
+      Math.abs(state.player.z - b.z) < b.d / 2,
+  )
+)
   state.player = safeSpawn(state.player);
 const camp = new THREE.Group();
 scene.add(camp);
@@ -611,6 +623,9 @@ const fire = orb(0.3, 0xffae55, scene, 3, 0.4, 0);
 const lamp = new THREE.PointLight(0xffb15c, 15, 14);
 lamp.position.set(3, 2, 0);
 scene.add(lamp);
+const colossi = new Colossi(scene, state, fx, audio, notify);
+const aerial = new AerialRig(scene, state, solid, notify, audio);
+aerial.extraAnchors = () => colossi.anchors();
 const ghost = box(4, 2.8, 0.55, 0xc5e99c);
 ghost.material = ghost.material.clone();
 ghost.material.transparent = true;
@@ -864,11 +879,18 @@ function attack() {
   noiseRange = weapon === "gun" ? 40 : weapon === "bow" ? 14 : 8;
   audio.play(weapon);
   const forward = { x: -Math.sin(yaw), z: -Math.cos(yaw) };
+  if (
+    colossi.strike(state.player, yaw, weapon, aerial.v.length(), clearSight)
+  ) {
+    save();
+    return;
+  }
   const targets = [...zombies, ...wild]
     .filter((t) => {
       const d = dist(t, state.player);
       return (
         d < range &&
+        (weapon !== "sword" || (state.player.y || 0) < 3) &&
         clearSight(state.player, t) &&
         ((t.x - state.player.x) * forward.x +
           (t.z - state.player.z) * forward.z) /
@@ -1034,9 +1056,10 @@ function safeSpawn(base) {
   return { x: 0, z: 0 };
 }
 function respawn() {
+  aerial.reset();
   state.deaths++;
   state.health = 100;
-  state.player = safeSpawn(state.base);
+  state.player = { ...safeSpawn(state.base), y: 0 };
   velocity = { x: 0, z: 0 };
   invulnerability = 5;
   for (const c of state.creatures)
@@ -1138,6 +1161,9 @@ function place() {
   updateHUD();
 }
 function updateHUD() {
+  if ($("aerialHUD"))
+    $("aerialHUD").innerHTML =
+      `<b>MANOBRA AÉREA</b><span>Gás ${Math.ceil(aerial.gas)}% · Altura ${Math.round(state.player.y || 0)} m · ${aerial.hooks.length}/2 cabos</span><small>${aerial.target ? "G: prender gancho · Z: segundo cabo" : "Aponte para um prédio ou colosso e pressione G"}<br>Shift: propulsão · Espaço: salto · X: soltar</small><span>Colossos: ${colossi.list.length} vivos · ${state.colossusKills} derrotados</span>`;
   const day = Math.floor(state.time / 720) + 1,
     minute = Math.floor(((state.time % 720) / 720) * 1440);
   $("clock").textContent =
@@ -1218,7 +1244,8 @@ function save() {
     structures: state.structures.map(({ mesh, ...s }) => s),
     zombieSnapshot: zombies.map(({ mesh, path, repath, moving, ...z }) => z),
     wildSnapshot: wild.map(({ mesh, path, repath, moving, ...w }) => w),
-    version: 2,
+    colossi: colossi.snapshot(),
+    version: 3,
   };
   try {
     localStorage.setItem("vigilia-v1", JSON.stringify(clean));
@@ -1247,7 +1274,8 @@ function tick(dt) {
   }
   if (
     dist(state.player, state.base) < 5 &&
-    zombies.every((z) => dist(z, state.player) > 10)
+    zombies.every((z) => dist(z, state.player) > 10) &&
+    colossi.list.every((g) => dist(g, state.player) > 15)
   )
     state.health = Math.min(100, state.health + dt * 3);
   attackTimer -= dt;
@@ -1275,15 +1303,20 @@ function tick(dt) {
       velocity.x *= Math.exp(-dt * 22);
       velocity.z *= Math.exp(-dt * 22);
     }
-    if (!blocked(p.x + velocity.x * dt, p.z)) p.x += velocity.x * dt;
-    else velocity.x = 0;
-    if (!blocked(p.x, p.z + velocity.z * dt)) p.z += velocity.z * dt;
-    else velocity.z = 0;
+    if (!aerial.active()) {
+      if (!blocked(p.x + velocity.x * dt, p.z)) p.x += velocity.x * dt;
+      else velocity.x = 0;
+      if (!blocked(p.x, p.z + velocity.z * dt)) p.z += velocity.z * dt;
+      else velocity.z = 0;
+    }
   } else {
     velocity.x = 0;
     velocity.z = 0;
   }
-  player.position.set(p.x, 0, p.z);
+  aerial.aim(yaw);
+  aerial.update(dt, dx, dz, keys.ShiftLeft, blocked);
+  colossi.update(dt, blocked, invulnerability > 0);
+  player.position.set(p.x, p.y || 0, p.z);
   animateHuman(player, Math.hypot(velocity.x, velocity.z), state.time, swing);
   player.rotation.y = yaw;
   for (const c of state.creatures) {
@@ -1384,7 +1417,11 @@ function tick(dt) {
       .filter((s) => !s.open && dist(s, z) < 3)
       .sort((a, b) => dist(a, z) - dist(b, z))[0];
     if (engaged && z.cooldown <= 0) {
-      if (dist(z, target) < 1.7 && target.kind !== "base") {
+      if (
+        dist(z, target) < 1.7 &&
+        target.kind !== "base" &&
+        (target.kind !== "player" || (p.y || 0) < 2)
+      ) {
         z.cooldown = 1;
         target.kind === "player"
           ? (state.health -=
@@ -1418,7 +1455,7 @@ function tick(dt) {
     if (w.hp < 100 && dist(w, p) < 7) {
       if (dist(w, p) > 1.5) move(w, p.x, p.z, 2.8, dt);
       if (dist(w, p) < 1.8 && w.timer > 1.2) {
-        if (invulnerability <= 0) state.health -= 5;
+        if (invulnerability <= 0 && (p.y || 0) < 2) state.health -= 5;
         w.timer = 0;
         if (state.health <= 0) {
           respawn();
@@ -1529,10 +1566,10 @@ function animate() {
   }
   const p = state.player;
   const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
-  const origin = new THREE.Vector3(p.x, 1.65, p.z);
+  const origin = new THREE.Vector3(p.x, (p.y || 0) + 1.65, p.z);
   const desired = new THREE.Vector3(
     p.x + Math.sin(yaw) * 7 * Math.cos(pitch),
-    2 + Math.sin(pitch) * 7,
+    (p.y || 0) + 2 + Math.sin(pitch) * 7,
     p.z + Math.cos(yaw) * 7 * Math.cos(pitch),
   );
   const ray = new THREE.Ray(origin, desired.clone().sub(origin).normalize()),
@@ -1551,7 +1588,7 @@ function animate() {
   if (nearest < length)
     desired.copy(origin).addScaledVector(ray.direction, nearest);
   camera.position.lerp(desired, 1 - Math.exp(-dt * 12));
-  camera.lookAt(p.x + forward.x * 4, 1.3, p.z + forward.z * 4);
+  camera.lookAt(p.x + forward.x * 4, (p.y || 0) + 1.3, p.z + forward.z * 4);
   if (fx.shake > 0 && settings.shake) {
     camera.position.x += (Math.random() - 0.5) * 0.05;
     camera.position.y += (Math.random() - 0.5) * 0.04;
@@ -1635,6 +1672,10 @@ addEventListener("keydown", (e) => {
   if (!running || paused || e.repeat) return;
   const weapon = { Digit1: "sword", Digit2: "bow", Digit3: "gun" }[e.code];
   if (weapon && state.weapons.includes(weapon)) state.weapon = weapon;
+  if (e.code === "KeyG" && !panelMode) aerial.fire(yaw);
+  if (e.code === "KeyZ" && !panelMode) aerial.fire(yaw, true);
+  if (e.code === "KeyX") aerial.release();
+  if (e.code === "Space" && !panelMode) aerial.jump();
   if (e.code === "KeyE") interact();
   if (e.code === "KeyC") openPanel("craft");
   if (e.code === "KeyB") openPanel("build");
@@ -1734,6 +1775,8 @@ window.vigilia = {
     running,
     audio: audio.context?.state || "uninitialized",
   }),
+  aerial: () => aerial.snapshot(),
+  colossi: () => colossi.snapshot(),
   collision: (x, z) => blocked(x, z),
   ready: true,
 };
@@ -1882,7 +1925,7 @@ function renderModal() {
         "",
       )}</div><div class="settings-group"><h3>CONTROLES</h3><label class="setting">Sensibilidade do mouse <input aria-label="Sensibilidade do mouse" data-setting="sensitivity" type="range" min=".2" max="2.5" step=".1" value="${settings.sensitivity}"></label><label class="setting">Inverter câmera vertical<input data-setting="invert" type="checkbox" ${settings.invert ? "checked" : ""}></label></div><p class="fine">Preferências salvas automaticamente. Plataforma: computador com teclado e mouse.</p><div class="stack">${actions("Voltar", "back", true)}</div>`;
   if (modalMode === "help")
-    html = `<span class="eyebrow">MANUAL DE CAMPO</span><h2 id="modalTitle">Você não está sozinho.</h2><p>Explore as ruas e a mata com sua companheira. Ela carrega os recursos automaticamente. Construa uma bancada para fabricar armas e uma cama para definir onde renascer.</p><div class="key-grid"><kbd>W A S D / Shift</kbd><span>Mover / correr</span><kbd>Mouse / clique</kbd><span>Câmera / atacar. Clique no mundo para capturar o mouse.</span><kbd>1 / 2 / 3</kbd><span>Espada / arco / pistola</span><kbd>E / Q / R</kbd><span>Coletar ou abrir portão / capturar / reanimar</span><kbd>C / B / T / F</kbd><span>Fabricar / construir / girar / reparar (2 madeiras + 1 pedra)</span><kbd>Esc</kbd><span>Fechar painel, cancelar construção ou pausar</span></div><p>Capture criaturas com até 35 PV usando cápsulas fabricadas. No painel de criaturas, atribua companheiras, guardiãs ou sentinelas em torres livres. Cinco abates próximos permitem evoluir com recursos.</p><p>Hordas chegam nos dias 5, 10, 15… Cada dia dura 12 minutos de simulação. Em segurança perto da base, sua vida recupera. Ao morrer, sua companheira retorna com você, mesmo incapacitada, mantendo o inventário.</p><div class="stack">${actions("Entendido", "back", true)}</div>`;
+    html = `<span class="eyebrow">MANUAL DE CAMPO</span><h2 id="modalTitle">Você não está sozinho.</h2><p>Explore as ruas e a mata com sua companheira. Ela carrega os recursos automaticamente. Construa uma bancada para fabricar armas e uma cama para definir onde renascer.</p><div class="key-grid"><kbd>W A S D / Shift</kbd><span>Mover / correr</span><kbd>Mouse / clique</kbd><span>Câmera / atacar. Clique no mundo para capturar o mouse.</span><kbd>1 / 2 / 3</kbd><span>Espada / arco / pistola</span><kbd>E / Q / R</kbd><span>Coletar ou abrir portão / capturar / reanimar</span><kbd>C / B / T / F</kbd><span>Fabricar / construir / girar / reparar (2 madeiras + 1 pedra)</span><kbd>G / Z / X / Espaço</kbd><span>Gancho / segundo cabo / soltar / salto. Shift recolhe cabos e propulsiona; gás recarrega ao pousar. Colossos têm nuca vulnerável: ataque por trás na altura da cabeça.</span><kbd>Esc</kbd><span>Fechar painel, cancelar construção ou pausar</span></div><p>Capture criaturas com até 35 PV usando cápsulas fabricadas. No painel de criaturas, atribua companheiras, guardiãs ou sentinelas em torres livres. Cinco abates próximos permitem evoluir com recursos.</p><p>Hordas chegam nos dias 5, 10, 15… Cada dia dura 12 minutos de simulação. Em segurança perto da base, sua vida recupera. Ao morrer, sua companheira retorna com você, mesmo incapacitada, mantendo o inventário.</p><div class="stack">${actions("Entendido", "back", true)}</div>`;
   if (modalMode === "reset")
     html = `<span class="eyebrow">NOVA EXPEDIÇÃO</span><h2 id="modalTitle">Começar de novo?</h2><p>Isso substitui a partida salva neste navegador. Suas configurações serão mantidas. O progresso atual será guardado em uma cópia local de recuperação.</p><div class="stack">${actions("Iniciar nova expedição", "confirmReset", true)}${actions("Manter meu progresso", "back")}</div>`;
   if (modalMode === "death")

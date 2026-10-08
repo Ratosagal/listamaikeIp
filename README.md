@@ -19,7 +19,9 @@ Você começa ao amanhecer com Brasa, uma espada e materiais básicos. Colete re
 
 | Controle | Ação |
 |---|---|
-| WASD / Shift | Mover / correr |
+| WASD / Shift | Mover / correr; no ar, direcionar / usar propulsão |
+| G / Z | Prender gancho / adicionar segundo cabo |
+| Espaço / X | Saltar ou impulsionar e soltar cabos / soltar cabos |
 | Mouse | Girar câmera; clique no cenário para capturar o mouse |
 | Clique esquerdo | Atacar |
 | 1 / 2 / 3 | Espada / arco / pistola |
@@ -33,6 +35,12 @@ Você começa ao amanhecer com Brasa, uma espada e materiais básicos. Colete re
 O combate usa mira assistida horizontal; o alvo e sua vida aparecem no centro da tela. O HUD indica a vida, companheira, inventário, ameaças, objetivo contextual e direção/distância do refúgio. No painel de criaturas, escolha explicitamente acompanhar, guardar área ou ocupar uma torre livre. Uma torre comporta uma sentinela. Cinco abates próximos desbloqueiam a evolução, que custa materiais.
 
 Muralhas e construções podem ser destruídas. Armas exigem uma bancada próxima; munições, flechas e cápsulas são fabricadas com materiais. Repare estruturas próximas com F, usando 2 madeiras e 1 pedra para recuperar até 100 PV. Em segurança perto da base, o jogador recupera vida. Ao morrer, o jogador revive na base com cinco segundos de proteção e a companheira sempre retorna junto, preservando o inventário e seu estado de incapacitação. Reanime-a com R. Ao vencer uma horda, a tela de resultados entrega recursos e permite continuar a expedição.
+
+## Colossos e manobra aérea
+
+Dois colossos de pedra rondam a cidade. Seus golpes de impacto têm preparação visível e danificam o jogador no chão e construções próximas. O corpo tem armadura; aproxime-se por trás, alcance a altura da nuca luminosa com os ganchos e ataque. Golpes de espada em velocidade causam dano extra. Vencer rende sucata, pedra, cápsulas e experiência para as criaturas. Os abates e a vida dos colossos persistem no save.
+
+Os ganchos usam mira assistida na direção horizontal da câmera, alcançam prédios e nucas a até 48 metros e permitem balanço, recolhimento dos cabos e pouso nos telhados. O propulsor consome gás; sem cabos, o tanque recarrega no chão ou em um telhado. O HUD exibe altitude, gás e cabos ativos. Esta versão não aplica dano de queda. Os modelos dos gigantes são originais e procedurais.
 
 ## Menus e acessibilidade
 

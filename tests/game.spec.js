@@ -110,7 +110,8 @@ test("death returns incapacitated companion and preserves inventory", async ({
   await page.waitForTimeout(200);
   const actual = await page.evaluate(() => vigilia.snapshot());
   expect(actual.health).toBe(100);
-  expect(actual.player).toEqual(actual.base);
+  expect(actual.player).toMatchObject(actual.base);
+  expect(actual.player.y).toBe(0);
   expect(actual.creatures[0].x).toBe(2);
   expect(actual.creatures[0].hp).toBe(0);
   expect(actual.inventory).toEqual(s.inventory);
