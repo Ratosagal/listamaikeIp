@@ -22,8 +22,9 @@ Você começa ao amanhecer com Brasa, uma espada e materiais básicos. Colete re
 | WASD / Shift | Mover / correr; no ar, direcionar / usar propulsão |
 | G / Z | Prender gancho / adicionar segundo cabo |
 | Espaço / X | Saltar ou impulsionar e soltar cabos / soltar cabos |
-| Mouse | Girar câmera; clique no cenário para capturar o mouse |
-| Clique esquerdo | Atacar |
+| Mouse | Girar câmera; clique para capturar o mouse ou arraste com botão direito para olhar ao redor |
+| Roda do mouse | Aproximar / afastar câmera |
+| Clique esquerdo | Atacar; segure para repetir golpes / disparos |
 | 1 / 2 / 3 | Espada / arco / pistola |
 | E | Coletar recursos ou abrir/fechar um portão próximo |
 | Q | Lançar cápsula; enfraqueça a criatura até 35 PV |
@@ -35,6 +36,12 @@ Você começa ao amanhecer com Brasa, uma espada e materiais básicos. Colete re
 O combate usa mira assistida horizontal; o alvo e sua vida aparecem no centro da tela. O HUD indica a vida, companheira, inventário, ameaças, objetivo contextual e direção/distância do refúgio. No painel de criaturas, escolha explicitamente acompanhar, guardar área ou ocupar uma torre livre. Uma torre comporta uma sentinela. Cinco abates próximos desbloqueiam a evolução, que custa materiais.
 
 Muralhas e construções podem ser destruídas. Armas exigem uma bancada próxima; munições, flechas e cápsulas são fabricadas com materiais. Repare estruturas próximas com F, usando 2 madeiras e 1 pedra para recuperar até 100 PV. Em segurança perto da base, o jogador recupera vida. Ao morrer, o jogador revive na base com cinco segundos de proteção e a companheira sempre retorna junto, preservando o inventário e seu estado de incapacitação. Reanime-a com R. Ao vencer uma horda, a tela de resultados entrega recursos e permite continuar a expedição.
+
+## Personagem, movimento e apresentação
+
+O sobrevivente usa um humanoide original com rosto, cabelo, roupa texturizada, colete, mochila, luvas, botas, bolsas e equipamento de manobra. Ombros, cotovelos, punhos, quadris, joelhos e tornozelos são articulados. A passada acompanha a distância percorrida e mistura caminhada, corrida, respiração, ataques, salto, queda, ganchos e aterrissagem. A rotação do corpo é gradual; com espada, olhar ao redor parado mantém a direção do personagem.
+
+A câmera acompanha o foco com suavização, evita prédios e defesas, oferece zoom e abre discretamente o campo de visão em alta velocidade. Saltos preservam o impulso horizontal. Árvores e pedras coletáveis usam instâncias que desaparecem individualmente na coleta. Superfícies imóveis são agrupadas por material e região para reduzir chamadas de desenho sem alterar os obstáculos. O cenário inclui fachadas com desgaste, árvores de copa arredondada, calçadas, meios-fios, faixas de pedestres, asfalto molhado, céu em gradiente e iluminação quente/fria que acompanha o ciclo do dia. Os perfis gráficos continuam disponíveis para ajustar o custo de sombras e resolução.
 
 ## Colossos e manobra aérea
 
@@ -62,7 +69,7 @@ npm test
 
 O Playwright inicia o servidor automaticamente, ou reutiliza um servidor local na porta 5173. Os testes usam Chromium em `/usr/bin/chromium` e contextos isolados. Em outro sistema, configure um Chromium instalado no `playwright.config.js` ou use o navegador do Playwright. Os cenários com saves preparados permitem validar hordas e resultados sem esperar uma hora real.
 
-A suíte cobre movimentação, fabricação, construção, captura, evolução, retorno após morte, pausa, configurações, reinício, resultados de hordas, restauração de progresso, atribuição de torres, portões, WebGL, resolução compacta e recuperação de saves inválidos.
+A suíte cobre movimentação, fabricação, construção, captura, evolução, retorno após morte, pausa, configurações, reinício, resultados de hordas, restauração de progresso, atribuição de torres, portões, WebGL, resolução compacta e recuperação de saves inválidos, ganchos, colossos, transições de animação, impulso do salto e ataque contínuo.
 
 ## Limitações atuais
 

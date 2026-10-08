@@ -1,5 +1,13 @@
 import * as THREE from "three";
 import "./style.css";
+import { instanceResources } from "./systems/resource-batches.js";
+import { createSurvivor, poseSurvivor } from "./systems/character.js";
+import {
+  batchStatic,
+  architecturalTexture,
+  createAtmosphere,
+  streetDetails,
+} from "./systems/presentation.js";
 import { AerialRig } from "./systems/aerial.js";
 import { Colossi } from "./systems/colossi.js";
 import { Soundscape } from "./systems/audio.js";
@@ -21,6 +29,7 @@ let fx,
   healthPrevious = 100,
   invulnerability = 0,
   swing = 0,
+  attackHeld = false,
   noiseTimer = 0,
   noiseRange = 0,
   velocity = { x: 0, z: 0 };
@@ -188,6 +197,8 @@ const keys = {},
   solid = [];
 const scene = new THREE.Scene();
 const occluders = [];
+const cameraBounds = new Map();
+const facadeTexture = architecturalTexture();
 const materialCache = new Map(),
   geometryCache = new Map();
 scene.background = new THREE.Color(0x859795);
@@ -226,12 +237,13 @@ sun.shadow.normalBias = 0.04;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.25;
 Object.assign(sun.shadow.camera, {
-  left: -65,
-  right: 65,
-  top: 65,
-  bottom: -65,
+  left: -40,
+  right: 40,
+  top: 40,
+  bottom: -40,
 });
 scene.add(sun);
+const atmosphere = createAtmosphere(scene);
 function mesh(geo, color, parent = scene, x = 0, y = 0, z = 0) {
   if (!materialCache.has(color))
     materialCache.set(
@@ -239,7 +251,7 @@ function mesh(geo, color, parent = scene, x = 0, y = 0, z = 0) {
       new THREE.MeshStandardMaterial({
         color,
         roughness: 0.85,
-        flatShading: true,
+        flatShading: false,
       }),
     );
   const m = new THREE.Mesh(geo, materialCache.get(color));
@@ -279,6 +291,9 @@ function house(x, z, w, d, h) {
     Math.round(x + z) % 2 ? 0x657b77 : 0x7b8174,
     g,
   );
+  buildingBody.material = buildingBody.material.clone();
+  buildingBody.material.map = facadeTexture;
+  buildingBody.material.roughness = 0.93;
   occluders.push(buildingBody);
   box(w + 0.15, 0.7, d + 0.15, 0x394c4d, g, 0, 0.35, 0);
   box(w, 0.16, d + 0.2, 0xaeb5a0, g, 0, h * 0.55, 0);
@@ -326,18 +341,42 @@ for (let i = 0; i < 100; i++) {
   const g = new THREE.Group();
   scene.add(g);
   g.position.set(x, 0, z);
-  box(0.6, 4, 0.6, 0x69523d, g);
-  mesh(new THREE.ConeGeometry(rand(2, 3), 5, 7), 0x293f34, g, 0, 5, 0);
-  mesh(new THREE.ConeGeometry(2.2, 3.2, 7), 0x3c5d4c, g, 0, 4.2, 0);
+  mesh(new THREE.CylinderGeometry(0.18, 0.32, 4, 9), 0x69523d, g, 0, 2, 0);
+  const crown = mesh(
+    new THREE.DodecahedronGeometry(rand(2, 3), 1),
+    0x293f34,
+    g,
+    0,
+    5,
+    0,
+  );
+  crown.scale.set(1, 1.1, 0.9);
+  const lowerCrown = mesh(
+    new THREE.DodecahedronGeometry(2.2, 1),
+    0x3c5d4c,
+    g,
+    0.4,
+    4.2,
+    0.3,
+  );
+  lowerCrown.scale.set(1.1, 0.75, 1);
   resources.push({ x, z, kind: "wood", mesh: g, amount: 5 });
 }
 for (let i = 0; i < 65; i++) {
-  const x = rand(-80, 80),
+  let x = rand(-80, 80),
     z = rand(-80, 80);
+  if (Math.hypot(x, z) < 6) {
+    const length = Math.hypot(x, z) || 1;
+    x = (x / length) * 6;
+    z = (z / length) * 6;
+  }
   if (solid.some((s) => dist(s, { x, z }) < 10)) continue;
   const kind = i % 3 ? "stone" : "scrap",
     m = mesh(
-      new THREE.DodecahedronGeometry(kind === "stone" ? 0.8 : 0.65),
+      new THREE.DodecahedronGeometry(
+        kind === "stone" ? 0.8 : 0.65,
+        kind === "stone" ? 1 : 0,
+      ),
       kind === "stone" ? 0x7e8b88 : 0x9d7663,
       scene,
       x,
@@ -346,7 +385,22 @@ for (let i = 0; i < 65; i++) {
     );
   resources.push({ x, z, kind, mesh: m, amount: kind === "stone" ? 4 : 5 });
 }
-// Stylized original characters built from geometry, without external game assets.
+// Freeze static collision bounds before combining architectural draw calls.
+scene.updateMatrixWorld(true);
+for (const object of occluders)
+  cameraBounds.set(
+    object,
+    new THREE.Box3().setFromObject(object).expandByScalar(0.25),
+  );
+const resourceMeshes = new Set();
+for (const resource of resources)
+  resource.mesh.traverse((o) => resourceMeshes.add(o));
+const architecture = [];
+scene.traverse((o) => {
+  if (o.isMesh && !resourceMeshes.has(o) && o !== ground) architecture.push(o);
+});
+const batchedSurfaces = batchStatic(scene, architecture);
+// Lightweight articulated zombies; the survivor uses a separate detailed rig.
 function human(zombie = false) {
   const g = new THREE.Group();
   scene.add(g);
@@ -381,12 +435,18 @@ function human(zombie = false) {
   }
   return g;
 }
-const player = human();
+const player = createSurvivor(scene);
+player.rotation.y = yaw;
 const weaponViews = {};
-const hand = player.userData.arms[1];
+const hand = new THREE.Group();
+hand.position.set(0, 0.67, 0.24);
+player.userData.rig.hands[1].add(hand);
 const sword = new THREE.Group();
 hand.add(sword);
-box(0.07, 0.9, 0.13, 0xd1ddd7, sword, 0, -0.83, -0.4);
+sword.position.set(0, -0.47, 0.16);
+box(0.065, 0.68, 0.13, 0xd1ddd7, sword, 0, -0.72, -0.4);
+box(0.09, 0.25, 0.11, 0x6b4b35, sword, 0, -0.24, -0.4);
+box(0.11, 0.07, 0.14, 0xba9d63, sword, 0, -0.1, -0.4);
 box(0.28, 0.07, 0.13, 0xba9d63, sword, 0, -0.37, -0.4);
 weaponViews.sword = sword;
 const bow = new THREE.Group();
@@ -593,7 +653,17 @@ resources.forEach((r, i) => {
     r.mesh.visible = false;
   }
 });
+const decorationBefore = new Set(scene.children);
 dressWorld(scene, ground, solid);
+streetDetails(scene);
+const decorationMeshes = [];
+for (const object of scene.children)
+  if (!decorationBefore.has(object))
+    object.traverse((o) => {
+      if (o.isMesh && !o.isInstancedMesh) decorationMeshes.push(o);
+    });
+batchStatic(scene, decorationMeshes);
+const resourceBatches = instanceResources(scene, resources);
 for (const z of zombies)
   if (blocked(z.x, z.z)) {
     const at = safeSpawn(z);
@@ -870,8 +940,10 @@ function attack() {
   const weapon = state.weapon,
     range = weapon === "sword" ? 3.4 : weapon === "bow" ? 28 : 40;
   const ammo = weapon === "bow" ? "arrows" : weapon === "gun" ? "ammo" : null;
-  if (ammo && !state.inventory[ammo])
+  if (ammo && !state.inventory[ammo]) {
+    attackHeld = false;
     return notify("Sem munição. Fabrique com C.");
+  }
   if (ammo) state.inventory[ammo]--;
   attackTimer = weapon === "gun" ? 0.3 : 0.65;
   swing = 1;
@@ -1160,10 +1232,18 @@ function place() {
   save();
   updateHUD();
 }
+const hudMarkup = new Map();
+function setHUDMarkup(id, html) {
+  if (hudMarkup.get(id) === html) return;
+  hudMarkup.set(id, html);
+  $(id).innerHTML = html;
+}
 function updateHUD() {
   if ($("aerialHUD"))
-    $("aerialHUD").innerHTML =
-      `<b>MANOBRA AÉREA</b><span>Gás ${Math.ceil(aerial.gas)}% · Altura ${Math.round(state.player.y || 0)} m · ${aerial.hooks.length}/2 cabos</span><small>${aerial.target ? "G: prender gancho · Z: segundo cabo" : "Aponte para um prédio ou colosso e pressione G"}<br>Shift: propulsão · Espaço: salto · X: soltar</small><span>Colossos: ${colossi.list.length} vivos · ${state.colossusKills} derrotados</span>`;
+    setHUDMarkup(
+      "aerialHUD",
+      `<b>MANOBRA AÉREA</b><span>Gás ${Math.ceil(aerial.gas)}% · Altura ${Math.round(state.player.y || 0)} m · ${aerial.hooks.length}/2 cabos</span><small>${aerial.target ? "G: prender gancho · Z: segundo cabo" : "Aponte para um prédio ou colosso e pressione G"}<br>Shift: propulsão · Espaço: salto · X: soltar</small><span>Colossos: ${colossi.list.length} vivos · ${state.colossusKills} derrotados</span>`,
+    );
   const day = Math.floor(state.time / 720) + 1,
     minute = Math.floor(((state.time % 720) / 720) * 1440);
   $("clock").textContent =
@@ -1204,18 +1284,23 @@ function updateHUD() {
     Math.atan2(state.base.x - state.player.x, state.base.z - state.player.z) -
     Math.PI -
     yaw;
-  $("objective").innerHTML =
-    `<b>PRÓXIMO PASSO</b>${objective}<span class="base-location"><span style="display:inline-block;transform:rotate(${-angle}rad)">↑</span> REFÚGIO · ${baseDistance} m</span>`;
+  setHUDMarkup(
+    "objective",
+    `<b>PRÓXIMO PASSO</b>${objective}<span class="base-location"><span style="display:inline-block;transform:rotate(${-angle}rad)">↑</span> REFÚGIO · ${baseDistance} m</span>`,
+  );
   const c = companion();
-  $("companion").innerHTML = c
+  let companionMarkup = c
     ? `<span class="label">${TYPES[c.type].name.toUpperCase()} / ${c.level === 2 ? "EVOLUÍDO" : "COMPANHEIRA"}</span><p>${c.hp <= 0 ? "INCAPACITADA · R para reanimar" : `${Math.ceil(c.hp)} PV · ${TYPES[c.type].power}`}<br>${c.xp}/5 XP · E para gerenciar</p>`
     : "<p>Sem companheira ativa · Gerencie suas criaturas</p>";
   if (c)
-    $("companion").innerHTML +=
-      `<div class="companion-health"><i style="width:${(Math.max(0, c.hp) / (c.level === 2 ? 150 : 100)) * 100}%"></i></div>`;
-  $("inventory").innerHTML = Object.entries(state.inventory)
-    .map(([k, v]) => `<span>${names[k]} <b>${v}</b></span>`)
-    .join("");
+    companionMarkup += `<div class="companion-health"><i style="width:${(Math.max(0, c.hp) / (c.level === 2 ? 150 : 100)) * 100}%"></i></div>`;
+  setHUDMarkup("companion", companionMarkup);
+  setHUDMarkup(
+    "inventory",
+    Object.entries(state.inventory)
+      .map(([k, v]) => `<span>${names[k]} <b>${v}</b></span>`)
+      .join(""),
+  );
   document.querySelectorAll("[data-weapon]").forEach((b) => {
     b.classList.toggle("active", b.dataset.weapon === state.weapon);
     b.disabled = !state.weapons.includes(b.dataset.weapon);
@@ -1279,6 +1364,7 @@ function tick(dt) {
   )
     state.health = Math.min(100, state.health + dt * 3);
   attackTimer -= dt;
+  if (attackHeld && !building && !panelMode) attack();
   saveTimer += dt;
   spawnTimer += dt;
   noticeTimer -= dt;
@@ -1296,12 +1382,12 @@ function tick(dt) {
       dx /= l;
       dz /= l;
       const speed = keys.ShiftLeft ? 7 : 4.5;
-      const factor = 1 - Math.exp(-dt * 18);
+      const factor = 1 - Math.exp(-dt * 11);
       velocity.x += (dx * speed - velocity.x) * factor;
       velocity.z += (dz * speed - velocity.z) * factor;
     } else {
-      velocity.x *= Math.exp(-dt * 22);
-      velocity.z *= Math.exp(-dt * 22);
+      velocity.x *= Math.exp(-dt * 12);
+      velocity.z *= Math.exp(-dt * 12);
     }
     if (!aerial.active()) {
       if (!blocked(p.x + velocity.x * dt, p.z)) p.x += velocity.x * dt;
@@ -1314,15 +1400,51 @@ function tick(dt) {
     velocity.z = 0;
   }
   aerial.aim(yaw);
+  const wasAirborne = aerial.active();
   aerial.update(dt, dx, dz, keys.ShiftLeft, blocked);
+  if (wasAirborne && !aerial.active()) {
+    velocity.x = aerial.v.x;
+    velocity.z = aerial.v.z;
+  }
   colossi.update(dt, blocked, invulnerability > 0);
   player.position.set(p.x, p.y || 0, p.z);
-  animateHuman(player, Math.hypot(velocity.x, velocity.z), state.time, swing);
-  player.rotation.y = yaw;
+  const groundSpeed = Math.hypot(velocity.x, velocity.z);
+  const onFloor =
+    p.y <= aerial.floor(p) + 0.06 &&
+    aerial.hooks.length === 0 &&
+    aerial.v.y <= 0;
+  const visualSpeed =
+    onFloor && p.y > 0 ? Math.hypot(aerial.v.x, aerial.v.z) : groundSpeed;
+  const sideInput = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0);
+  poseSurvivor(player, {
+    speed: visualSpeed,
+    dt,
+    time: state.time,
+    attack: swing,
+    airborne: !onFloor,
+    hooks: aerial.hooks.length,
+    vertical: aerial.v.y,
+    strafe: sideInput,
+    forward: 1,
+    weapon: state.weapon,
+  });
+  const facing =
+    swing > 0 || aerial.hooks.length > 0 || state.weapon !== "sword"
+      ? yaw
+      : Math.hypot(dx, dz) > 0.01
+        ? Math.atan2(-dx, -dz)
+        : player.rotation.y;
+  const turn = Math.atan2(
+    Math.sin(facing - player.rotation.y),
+    Math.cos(facing - player.rotation.y),
+  );
+  player.rotation.y += turn * (1 - Math.exp(-dt * 14));
+  for (const [kind, view] of Object.entries(weaponViews))
+    view.visible = kind === state.weapon;
   for (const c of state.creatures) {
     const m = creatureViews.get(c);
     if (c.hp > 0) {
-      if (c.role === "companion" && dist(c, p) > 2.5)
+      if (c.role === "companion" && (dist(c, p) > 2.5 || dist(c, p) < 1.3))
         move(c, p.x + Math.cos(yaw) * 1.5, p.z - Math.sin(yaw) * 1.5, 6, dt);
       if (
         c.role === "companion" &&
@@ -1532,13 +1654,7 @@ function tick(dt) {
     );
     ghost.rotation.y = building.angle;
   }
-  const phase = (state.time % 720) / 720,
-    light = 0.5 + Math.max(0, Math.sin(phase * Math.PI * 2)) * 1.4;
-  ambient.intensity = light;
-  sun.intensity = light;
-  const color = new THREE.Color().setHSL(0.46, 0.09, 0.18 + light * 0.21);
-  scene.background = color;
-  scene.fog.color.copy(color);
+  atmosphere.update((state.time % 720) / 720, p, ambient, sun, scene.fog);
   sun.position.set(p.x + 25, 45, p.z + 20);
   sun.target.position.set(p.x, 0, p.z);
   sun.target.updateMatrixWorld();
@@ -1554,6 +1670,19 @@ function tick(dt) {
   }
 }
 let idleFrame = 0;
+let cameraDistance = 6.2;
+const cameraFocus = new THREE.Vector3(
+  state.player.x,
+  (state.player.y || 0) + 1.65,
+  state.player.z,
+);
+const cameraAim = new THREE.Vector3();
+const cameraBoundsScratch = new THREE.Box3();
+const cameraHit = new THREE.Vector3();
+const cameraDesired = new THREE.Vector3();
+const cameraOrigin = new THREE.Vector3();
+const cameraForward = new THREE.Vector3();
+const chaseRay = new THREE.Ray();
 function animate() {
   requestAnimationFrame(animate);
   clock.update();
@@ -1565,35 +1694,67 @@ function animate() {
     idleFrame = 0;
   }
   const p = state.player;
-  const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
-  const origin = new THREE.Vector3(p.x, (p.y || 0) + 1.65, p.z);
-  const desired = new THREE.Vector3(
-    p.x + Math.sin(yaw) * 7 * Math.cos(pitch),
-    (p.y || 0) + 2 + Math.sin(pitch) * 7,
-    p.z + Math.cos(yaw) * 7 * Math.cos(pitch),
+  cameraForward.set(-Math.sin(yaw), 0, -Math.cos(yaw));
+  cameraOrigin.set(p.x, (p.y || 0) + 1.65, p.z);
+  cameraFocus.lerp(cameraOrigin, 1 - Math.exp(-dt * 18));
+  const aerialSpeed = aerial.active()
+    ? aerial.v.length()
+    : Math.hypot(velocity.x, velocity.z);
+  const travelFov = 60 + Math.min(8, Math.max(0, aerialSpeed - 4) * 0.55);
+  camera.fov = THREE.MathUtils.lerp(
+    camera.fov,
+    travelFov,
+    1 - Math.exp(-dt * 5),
   );
-  const ray = new THREE.Ray(origin, desired.clone().sub(origin).normalize()),
-    length = origin.distanceTo(desired),
-    hit = new THREE.Vector3();
+  camera.updateProjectionMatrix();
+  const boom =
+    cameraDistance + Math.min(0.8, Math.max(0, aerialSpeed - 7) * 0.04);
+  cameraDesired.set(
+    cameraFocus.x +
+      Math.sin(yaw) * boom * Math.cos(pitch) +
+      Math.cos(yaw) * 0.55,
+    cameraFocus.y + 0.35 + Math.sin(pitch) * boom,
+    cameraFocus.z +
+      Math.cos(yaw) * boom * Math.cos(pitch) -
+      Math.sin(yaw) * 0.55,
+  );
+  chaseRay.origin.copy(cameraOrigin);
+  chaseRay.direction.copy(cameraDesired).sub(cameraOrigin).normalize();
+  const length = cameraOrigin.distanceTo(cameraDesired);
   let nearest = length;
   for (const object of occluders) {
-    if (!object.parent?.parent || !object.parent.visible) continue;
-    const bounds = new THREE.Box3().setFromObject(object).expandByScalar(0.25);
-    if (ray.intersectBox(bounds, hit)) {
-      const distance = origin.distanceTo(hit);
+    if (
+      !cameraBounds.has(object) &&
+      (!object.parent?.parent || !object.parent.visible)
+    )
+      continue;
+    const bounds =
+      cameraBounds.get(object) ||
+      cameraBoundsScratch.setFromObject(object).expandByScalar(0.25);
+    if (chaseRay.intersectBox(bounds, cameraHit)) {
+      const distance = cameraOrigin.distanceTo(cameraHit);
       if (distance > 0.2)
         nearest = Math.min(nearest, Math.max(0.7, distance - 0.2));
     }
   }
-  if (nearest < length)
-    desired.copy(origin).addScaledVector(ray.direction, nearest);
-  camera.position.lerp(desired, 1 - Math.exp(-dt * 12));
-  camera.lookAt(p.x + forward.x * 4, (p.y || 0) + 1.3, p.z + forward.z * 4);
+  if (nearest < length) {
+    cameraDesired
+      .copy(cameraOrigin)
+      .addScaledVector(chaseRay.direction, nearest);
+    camera.position.copy(cameraDesired);
+  } else camera.position.lerp(cameraDesired, 1 - Math.exp(-dt * 14));
+  cameraAim.set(
+    cameraFocus.x + cameraForward.x * 3,
+    cameraFocus.y - 0.2,
+    cameraFocus.z + cameraForward.z * 3,
+  );
+  camera.lookAt(cameraAim);
   if (fx.shake > 0 && settings.shake) {
     camera.position.x += (Math.random() - 0.5) * 0.05;
     camera.position.y += (Math.random() - 0.5) * 0.04;
   }
   camera.updateMatrixWorld();
+  resourceBatches.update();
   fx.update(dt, camera);
   for (const e of [...effects]) {
     e.life -= dt;
@@ -1672,10 +1833,10 @@ addEventListener("keydown", (e) => {
   if (!running || paused || e.repeat) return;
   const weapon = { Digit1: "sword", Digit2: "bow", Digit3: "gun" }[e.code];
   if (weapon && state.weapons.includes(weapon)) state.weapon = weapon;
-  if (e.code === "KeyG" && !panelMode) aerial.fire(yaw);
-  if (e.code === "KeyZ" && !panelMode) aerial.fire(yaw, true);
+  if (e.code === "KeyG" && !panelMode) aerial.fire(yaw, false, velocity);
+  if (e.code === "KeyZ" && !panelMode) aerial.fire(yaw, true, velocity);
   if (e.code === "KeyX") aerial.release();
-  if (e.code === "Space" && !panelMode) aerial.jump();
+  if (e.code === "Space" && !panelMode) aerial.jump(velocity);
   if (e.code === "KeyE") interact();
   if (e.code === "KeyC") openPanel("craft");
   if (e.code === "KeyB") openPanel("build");
@@ -1712,7 +1873,11 @@ addEventListener("keydown", (e) => {
   if (e.code === "KeyT" && building) building.angle += Math.PI / 4;
 });
 addEventListener("keyup", (e) => (keys[e.code] = false));
+addEventListener("mouseup", (e) => {
+  if (e.button === 0) attackHeld = false;
+});
 addEventListener("blur", () => {
+  attackHeld = false;
   Object.keys(keys).forEach((k) => (keys[k] = false));
   if (running && !paused) showModal("pause");
 });
@@ -1721,13 +1886,16 @@ document.addEventListener("visibilitychange", () => {
 });
 addEventListener("mousemove", (e) => {
   if (
-    document.pointerLockElement &&
+    (document.pointerLockElement || e.buttons === 2) &&
     running &&
     !paused &&
     !panelMode &&
     !modalMode
   ) {
-    yaw -= e.movementX * 0.0025 * settings.sensitivity;
+    yaw -=
+      THREE.MathUtils.clamp(e.movementX, -180, 180) *
+      0.0025 *
+      settings.sensitivity;
     pitch = THREE.MathUtils.clamp(
       pitch +
         e.movementY * 0.002 * settings.sensitivity * (settings.invert ? -1 : 1),
@@ -1741,10 +1909,24 @@ $("world").addEventListener("mousedown", (e) => {
   if (!running || paused) return;
   if (building) place();
   else if (!panelMode) {
+    attackHeld = true;
     if (!document.pointerLockElement) lockMouse();
     attack();
   }
 });
+$("world").addEventListener("contextmenu", (e) => e.preventDefault());
+$("world").addEventListener(
+  "wheel",
+  (e) => {
+    if (!running || paused || panelMode) return;
+    cameraDistance = THREE.MathUtils.clamp(
+      cameraDistance + e.deltaY * 0.005,
+      3.2,
+      10,
+    );
+  },
+  { passive: true },
+);
 addEventListener("resize", () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
@@ -1774,6 +1956,15 @@ window.vigilia = {
     paused,
     running,
     audio: audio.context?.state || "uninitialized",
+  }),
+  character: () => ({
+    mode: player.userData.rig.mode,
+    speed: player.userData.rig.speed,
+    phase: player.userData.rig.phase,
+    joints: player.userData.rig.knees.map((k) => k.rotation.x),
+    facing: player.rotation.y,
+    batchedSurfaces,
+    resourceBatches: resourceBatches.batches,
   }),
   aerial: () => aerial.snapshot(),
   colossi: () => colossi.snapshot(),
@@ -1850,6 +2041,7 @@ function applySettings() {
   }
   renderer.shadowMap.needsUpdate = true;
   document.body.classList.toggle("high-contrast", settings.highContrast);
+  document.body.classList.toggle("quality-low", settings.quality === "low");
   audio.apply();
   storePreferences(settings);
 }
@@ -1859,6 +2051,7 @@ function showModal(mode) {
   else modalReturn = null;
   focusReturn = document.activeElement;
   modalMode = mode;
+  attackHeld = false;
   if (running) {
     paused = true;
     save();
@@ -1925,7 +2118,7 @@ function renderModal() {
         "",
       )}</div><div class="settings-group"><h3>CONTROLES</h3><label class="setting">Sensibilidade do mouse <input aria-label="Sensibilidade do mouse" data-setting="sensitivity" type="range" min=".2" max="2.5" step=".1" value="${settings.sensitivity}"></label><label class="setting">Inverter câmera vertical<input data-setting="invert" type="checkbox" ${settings.invert ? "checked" : ""}></label></div><p class="fine">Preferências salvas automaticamente. Plataforma: computador com teclado e mouse.</p><div class="stack">${actions("Voltar", "back", true)}</div>`;
   if (modalMode === "help")
-    html = `<span class="eyebrow">MANUAL DE CAMPO</span><h2 id="modalTitle">Você não está sozinho.</h2><p>Explore as ruas e a mata com sua companheira. Ela carrega os recursos automaticamente. Construa uma bancada para fabricar armas e uma cama para definir onde renascer.</p><div class="key-grid"><kbd>W A S D / Shift</kbd><span>Mover / correr</span><kbd>Mouse / clique</kbd><span>Câmera / atacar. Clique no mundo para capturar o mouse.</span><kbd>1 / 2 / 3</kbd><span>Espada / arco / pistola</span><kbd>E / Q / R</kbd><span>Coletar ou abrir portão / capturar / reanimar</span><kbd>C / B / T / F</kbd><span>Fabricar / construir / girar / reparar (2 madeiras + 1 pedra)</span><kbd>G / Z / X / Espaço</kbd><span>Gancho / segundo cabo / soltar / salto. Shift recolhe cabos e propulsiona; gás recarrega ao pousar. Colossos têm nuca vulnerável: ataque por trás na altura da cabeça.</span><kbd>Esc</kbd><span>Fechar painel, cancelar construção ou pausar</span></div><p>Capture criaturas com até 35 PV usando cápsulas fabricadas. No painel de criaturas, atribua companheiras, guardiãs ou sentinelas em torres livres. Cinco abates próximos permitem evoluir com recursos.</p><p>Hordas chegam nos dias 5, 10, 15… Cada dia dura 12 minutos de simulação. Em segurança perto da base, sua vida recupera. Ao morrer, sua companheira retorna com você, mesmo incapacitada, mantendo o inventário.</p><div class="stack">${actions("Entendido", "back", true)}</div>`;
+    html = `<span class="eyebrow">MANUAL DE CAMPO</span><h2 id="modalTitle">Você não está sozinho.</h2><p>Explore as ruas e a mata com sua companheira. Ela carrega os recursos automaticamente. Construa uma bancada para fabricar armas e uma cama para definir onde renascer.</p><div class="key-grid"><kbd>W A S D / Shift</kbd><span>Mover / correr</span><kbd>Mouse / clique</kbd><span>Câmera / atacar. Segure o clique para repetir ataques. Arraste com botão direito para olhar ao redor; roda do mouse ajusta a distância.</span><kbd>1 / 2 / 3</kbd><span>Espada / arco / pistola</span><kbd>E / Q / R</kbd><span>Coletar ou abrir portão / capturar / reanimar</span><kbd>C / B / T / F</kbd><span>Fabricar / construir / girar / reparar (2 madeiras + 1 pedra)</span><kbd>G / Z / X / Espaço</kbd><span>Gancho / segundo cabo / soltar / salto. Shift recolhe cabos e propulsiona; gás recarrega ao pousar. Colossos têm nuca vulnerável: ataque por trás na altura da cabeça.</span><kbd>Esc</kbd><span>Fechar painel, cancelar construção ou pausar</span></div><p>Capture criaturas com até 35 PV usando cápsulas fabricadas. No painel de criaturas, atribua companheiras, guardiãs ou sentinelas em torres livres. Cinco abates próximos permitem evoluir com recursos.</p><p>Hordas chegam nos dias 5, 10, 15… Cada dia dura 12 minutos de simulação. Em segurança perto da base, sua vida recupera. Ao morrer, sua companheira retorna com você, mesmo incapacitada, mantendo o inventário.</p><div class="stack">${actions("Entendido", "back", true)}</div>`;
   if (modalMode === "reset")
     html = `<span class="eyebrow">NOVA EXPEDIÇÃO</span><h2 id="modalTitle">Começar de novo?</h2><p>Isso substitui a partida salva neste navegador. Suas configurações serão mantidas. O progresso atual será guardado em uma cópia local de recuperação.</p><div class="stack">${actions("Iniciar nova expedição", "confirmReset", true)}${actions("Manter meu progresso", "back")}</div>`;
   if (modalMode === "death")

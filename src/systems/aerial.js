@@ -39,7 +39,7 @@ export class AerialRig {
         .sort((a, b) => (b.align - a.align) * 40 + a.d - b.d)[0]?.b || null;
     return this.target;
   }
-  fire(yaw, second = false) {
+  fire(yaw, second = false, horizontal = null) {
     const b = this.aim(yaw);
     if (!b) return this.notify("Mire na direção de um prédio a até 48 metros.");
     if (this.gas < 10)
@@ -61,6 +61,10 @@ export class AerialRig {
     }
     const origin = new THREE.Vector3(p.x, p.y + 1, p.z);
     const direction = anchor.clone().sub(origin).normalize();
+    if (horizontal && !this.active()) {
+      this.v.x = horizontal.x;
+      this.v.z = horizontal.z;
+    }
     this.hooks.push({ anchor, length: origin.distanceTo(anchor) });
     this.v.addScaledVector(direction, 14);
     this.v.y = Math.max(this.v.y, 8);
@@ -82,12 +86,17 @@ export class AerialRig {
     this.state.player.y = 0;
     this.gas = 100;
   }
-  jump() {
+  jump(horizontal = null) {
     if (this.hooks.length) {
       this.release();
       this.v.y = Math.max(8, this.v.y + 5);
-    } else if (this.state.player.y <= this.floor(this.state.player) + 0.1)
+    } else if (this.state.player.y <= this.floor(this.state.player) + 0.1) {
+      if (horizontal) {
+        this.v.x = horizontal.x;
+        this.v.z = horizontal.z;
+      }
       this.v.y = 8;
+    }
   }
   floor(p) {
     let floor = 0;
