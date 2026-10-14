@@ -34,7 +34,7 @@ async function launch(page, state) {
         JSON.stringify({ quality: "low", music: 0, effects: 0 }),
       );
   }, state);
-  await page.goto("/");
+  await page.goto("/legacy.html");
   await page.waitForFunction(() => window.vigilia?.ready);
   await page.locator("#play").click();
   await page.evaluate(() => document.exitPointerLock());
@@ -257,7 +257,7 @@ test("invalid saved data is preserved for recovery instead of crashing", async (
   await page.addInitScript(() =>
     localStorage.setItem("vigilia-v1", '{"broken":'),
   );
-  await page.goto("/");
+  await page.goto("/legacy.html");
   await page.waitForFunction(() => window.vigilia?.ready);
   await expect(page.locator("#saveInfo")).toContainText("preservado");
   expect(

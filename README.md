@@ -1,80 +1,73 @@
-# Vigília — Sobreviva junto
+# Vigília — Jardim de Resistência
 
-Jogo de sobrevivência 3D para navegador, com criaturas originais, câmera atrás do personagem, combate em tempo real e construção livre. Feito com Three.js, JavaScript, HTML, CSS e Vite, para computador com teclado, mouse e WebGL.
+Defesa urbana 3D para navegador, com personagem controlável e planejamento por tablet 2D. Explore um bairro abandonado, plante defesas nas três ruas e impeça os zumbis de alcançar o refúgio. Esta é a versão atual do jogo: plantas substituem captura e criaturas companheiras. Os modelos e interfaces são originais.
 
 ## Executar
 
-Node.js 22.12+ (validado com Node 24):
+Requer Node.js 22 ou superior.
 
 ```sh
-npm ci --cache /tmp/npm-cache
+npm ci
 npm run dev
 ```
 
-`npm run build` gera a versão estática em `dist/`; `npm run preview` serve esse build. Vercel, Netlify e Cloudflare Pages podem usar o preset Vite, build `npm run build` e saída `dist`. Não precisa de variáveis de ambiente.
+Para gerar o site:
+
+```sh
+npm run build
+```
+
+No Vercel: preset Vite, comando `npm run build`, diretório de saída `dist`. O jogo não precisa de servidor de aplicação, chaves ou serviços externos.
 
 ## Jogar
 
-Você começa ao amanhecer com Brasa, uma espada e materiais básicos. Colete recursos, construa uma bancada e uma cama, fabrique armas e cápsulas e prepare seu refúgio. A primeira horda chega no dia 5; cada dia dura 12 minutos de simulação. Sem fome ou sede. Zumbis comuns vagam pela cidade e perseguem ao avistar um alvo próximo, ouvir um ataque ou sofrer dano. Armas de fogo atraem inimigos mais distantes. As hordas procuram a base.
+O bairro tem três rotas de ataque e quinze canteiros. O jogador começa no refúgio com 180 de energia, espada, arco e materiais. A primeira onda chega após 60 segundos de simulação; é possível antecipá-la. Vencer uma onda dá 50 de energia e oito sucatas, com 40 segundos para preparar a próxima. As ondas aumentam em número de inimigos, resistência e dano. Cada zumbi derrotado rende 12 de energia.
+
+| Planta | Função | Custo |
+|---|---|---|
+| Brotadora | Dispara projéteis na rua | 40 energia |
+| Casca | Bloqueia zumbis com muita vida | 30 energia |
+| Estopim | Explode quando inimigos se aproximam; uso único | 70 energia |
+| Névoa | Dispara e desacelera inimigos | 60 energia |
+| Aurora | Gera energia periodicamente | 50 energia |
+
+Todas as plantas podem ser melhoradas até o nível três. Melhorias aumentam vida, dano ou produção; reparos custam dez de energia e duas madeiras. Remover uma planta recupera 40% do custo inicial. Zumbis mordem plantas no caminho. Inimigos que atravessam a defesa causam 35 de dano ao refúgio, que começa com 500 de integridade. Quando ele cai, a expedição termina e pode ser reiniciada.
 
 | Controle | Ação |
 |---|---|
-| WASD / Shift | Mover / correr; no ar, direcionar / usar propulsão |
-| G / Z | Prender gancho / adicionar segundo cabo |
-| Espaço / X | Saltar ou impulsionar e soltar cabos / soltar cabos |
-| Mouse | Girar câmera; clique para capturar o mouse ou arraste com botão direito para olhar ao redor |
-| Roda do mouse | Aproximar / afastar câmera |
-| Clique esquerdo | Atacar; segure para repetir golpes / disparos |
-| 1 / 2 / 3 | Espada / arco / pistola |
-| E | Coletar recursos ou abrir/fechar um portão próximo |
-| Q | Lançar cápsula; enfraqueça a criatura até 35 PV |
-| R | Reanimar uma criatura incapacitada próxima |
-| C / B | Fabricar / construir |
-| T / F | Girar estrutura / reparar construção próxima (2 madeiras + 1 pedra) |
-| Esc | Fechar painel, cancelar construção ou pausar e liberar o mouse |
+| WASD / Shift | Mover / correr |
+| Espaço | Saltar |
+| Mouse / botão direito | Mirar com mouse capturado / arrastar para olhar ao redor |
+| Roda do mouse | Ajustar distância da câmera |
+| Clique esquerdo | Atacar; segurar repete golpes ou disparos |
+| 1 / 2 / 3 | Espada / arco / pistola fabricada |
+| E | Plantar no canteiro próximo ou coletar recursos |
+| Q | Alternar a semente selecionada |
+| R / F | Melhorar / reparar a planta próxima |
+| Tab ou T | Abrir tablet |
+| Escape ou T | Fechar tablet; Escape também pausa o jogo |
+| C | Abrir bancada; fabricação exige proximidade do refúgio |
 
-O combate usa mira assistida horizontal; o alvo e sua vida aparecem no centro da tela. O HUD indica a vida, companheira, inventário, ameaças, objetivo contextual e direção/distância do refúgio. No painel de criaturas, escolha explicitamente acompanhar, guardar área ou ocupar uma torre livre. Uma torre comporta uma sentinela. Cinco abates próximos desbloqueiam a evolução, que custa materiais.
+Selecione sementes pela barra inferior ou pelo tablet. A prévia no chão indica o canteiro próximo. No tablet, escolha a semente e um canteiro explorado, veja alcance e custo e confirme. Canteiros ocupados oferecem melhoria, reparo e remoção. Ambos os métodos usam o mesmo sistema de custos e validação. O tablet pausa a simulação; Tab navega pelos seus controles, e Escape ou T retorna ao jogo.
 
-Muralhas e construções podem ser destruídas. Armas exigem uma bancada próxima; munições, flechas e cápsulas são fabricadas com materiais. Repare estruturas próximas com F, usando 2 madeiras e 1 pedra para recuperar até 100 PV. Em segurança perto da base, o jogador recupera vida. Ao morrer, o jogador revive na base com cinco segundos de proteção e a companheira sempre retorna junto, preservando o inventário e seu estado de incapacitação. Reanime-a com R. Ao vencer uma horda, a tela de resultados entrega recursos e permite continuar a expedição.
+Explorar revela novos canteiros. O mapa mostra edifícios, ruas, refúgio, posição do jogador e inimigos em regiões reveladas. A bancada também afia a espada até o nível três, aumentando o dano. Recursos de madeira, pedra e sucata ficam nas áreas verdes laterais. O inventário pertence ao jogador. Ao morrer, ele retorna ao refúgio com inventário intacto e cinco segundos de proteção; o refúgio perde 20 de integridade. Perto dele, a vida recupera gradualmente.
 
-## Personagem, movimento e apresentação
+## Visual e desempenho
 
-O sobrevivente usa um humanoide original com rosto, cabelo, roupa texturizada, colete, mochila, luvas, botas, bolsas e equipamento de manobra. Ombros, cotovelos, punhos, quadris, joelhos e tornozelos são articulados. A passada acompanha a distância percorrida e mistura caminhada, corrida, respiração, ataques, salto, queda, ganchos e aterrissagem. A rotação do corpo é gradual; com espada, olhar ao redor parado mantém a direção do personagem.
-
-A câmera acompanha o foco com suavização, evita prédios e defesas, oferece zoom e abre discretamente o campo de visão em alta velocidade. Saltos preservam o impulso horizontal. Árvores e pedras coletáveis usam instâncias que desaparecem individualmente na coleta. Superfícies imóveis são agrupadas por material e região para reduzir chamadas de desenho sem alterar os obstáculos. O cenário inclui fachadas com desgaste, árvores de copa arredondada, calçadas, meios-fios, faixas de pedestres, asfalto molhado, céu em gradiente e iluminação quente/fria que acompanha o ciclo do dia. Os perfis gráficos continuam disponíveis para ajustar o custo de sombras e resolução.
-
-## Colossos e manobra aérea
-
-Dois colossos de pedra rondam a cidade. Seus golpes de impacto têm preparação visível e danificam o jogador no chão e construções próximas. O corpo tem armadura; aproxime-se por trás, alcance a altura da nuca luminosa com os ganchos e ataque. Golpes de espada em velocidade causam dano extra. Vencer rende sucata, pedra, cápsulas e experiência para as criaturas. Os abates e a vida dos colossos persistem no save.
-
-Os ganchos usam mira assistida na direção horizontal da câmera, alcançam prédios e nucas a até 48 metros e permitem balanço, recolhimento dos cabos e pouso nos telhados. O propulsor consome gás; sem cabos, o tanque recarrega no chão ou em um telhado. O HUD exibe altitude, gás e cabos ativos. Esta versão não aplica dano de queda. Os modelos dos gigantes são originais e procedurais.
-
-## Menus e acessibilidade
-
-Menu inicial, continuar, nova expedição, ajuda, pausa, retomar, reiniciar e retornar ao menu. As configurações incluem três perfis gráficos, sensibilidade, inversão da câmera, alto contraste, partículas, tremor e feedback de dano. Tremor fica desligado por padrão. Música e efeitos têm volumes separados e um botão para testar áudio. Diálogos permitem navegação por Tab/Shift+Tab e Escape. Os painéis de fabricação, construção e criaturas pausam a simulação para permitir decisões sem ataques durante a interface.
-
-O perfil Leve desativa sombras e limita a resolução para máquinas menos potentes. Partículas têm um pool de tamanho fixo; materiais e geometrias são compartilhados; vegetação usa instâncias. Áudio só começa depois de interação do usuário. Veja [ASSETS.md](ASSETS.md) para a origem dos recursos.
+Humanoide articulado original com rosto, cabelo, vestuário, mochila e equipamento. Animações procedurais misturam caminhada, corrida, respiração, ataque, salto e aterrissagem. Cidade com fachadas desgastadas, iluminação atmosférica, árvores, asfalto molhado, sombras e plantas tridimensionais. Os perfis Leve, Equilibrado e Alta estão no menu de pausa. Leve desativa sombras e reduz a resolução. Arquitetura imóvel é agrupada por material e região; partículas têm um pool limitado. Modelos são estilizados e procedurais, não recursos fotográficos.
 
 ## Salvamento
 
-O progresso e as preferências ficam no localStorage deste navegador. Saves antigos do protótipo são carregados e normalizados. Recursos coletados, criaturas capturadas, ferimentos de criaturas selvagens, zumbis, hordas ativas, construções, inventário e progressão persistem. A partida salva ao pausar, nas principais ações, a cada dez segundos de simulação e ao sair. Abrir o menu inicial não substitui o save.
+Progresso salvo automaticamente no localStorage, em `vigilia-city-defense-v1`. Plantas, níveis, danos, canteiros explorados, recursos coletados, ondas ativas, inimigos, energia e inventário persistem. O save de sobrevivência anterior permanece intacto em `vigilia-v1`; materiais compatíveis são importados uma vez ao iniciar o novo modo. Um save inválido é preservado em uma chave de recuperação antes de iniciar uma partida limpa.
 
-Reiniciar pede confirmação e guarda o progresso anterior na chave `vigilia-recovery`. Um save inválido é preservado nessa chave e um aviso explica o problema. Essas cópias são locais; limpar os dados do navegador apaga o progresso. Não há sincronização entre dispositivos ou contas.
-
-## Testes
+## Verificação
 
 ```sh
 npm test
 ```
 
-O Playwright inicia o servidor automaticamente, ou reutiliza um servidor local na porta 5173. Os testes usam Chromium em `/usr/bin/chromium` e contextos isolados. Em outro sistema, configure um Chromium instalado no `playwright.config.js` ou use o navegador do Playwright. Os cenários com saves preparados permitem validar hordas e resultados sem esperar uma hora real.
+Playwright usa Chromium em `/usr/bin/chromium`, servido por Vite. `tests/defense.spec.js` verifica custos, exploração, efeitos das cinco plantas, ondas, tablet, fabricação, combate e salvamento. Os testes anteriores acessam `legacy.html`, mantido para regressão do humanoide, ganchos e sistemas anteriores. O build de produção publica somente o novo modo pela página principal. A documentação anterior está em [docs/legacy-game.md](docs/legacy-game.md).
 
-A suíte cobre movimentação, fabricação, construção, captura, evolução, retorno após morte, pausa, configurações, reinício, resultados de hordas, restauração de progresso, atribuição de torres, portões, WebGL, resolução compacta e recuperação de saves inválidos, ganchos, colossos, transições de animação, impulso do salto e ataque contínuo.
+## Limites desta versão
 
-## Limitações atuais
-
-- Um jogador. O estado é serializável e os sistemas de áudio, efeitos, navegação e cenário estão separados; multiplayer ainda exige servidor autoritativo e sincronização.
-- Região compacta com prédios fechados, três espécies e uma evolução por espécie. Não há interiores exploráveis ou campanha com final definitivo; a vitória é sobreviver a cada horda.
-- Controle por teclado e mouse. A interface se adapta a janelas menores, mas não há controles de toque ou gamepad.
-- Modelos geométricos e animações procedurais. A trilha é sintetizada e o desempenho real deve ser conferido nos dispositivos de destino.
-- Navegação usa A* simplificado para prédios e veículos; as defesas construídas continuam sendo obstáculos atacáveis. Não é um sistema completo de navegação física.
+Um jogador, um bairro, três ruas e cinco plantas. Plantio restrito a canteiros; edifícios não têm interiores. Teclado e mouse, sem comandos de toque ou gamepad. A simulação é separada da renderização e serializável; multiplayer ainda exige servidor e sincronização. O desempenho deve ser conferido nos dispositivos de destino.

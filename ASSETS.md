@@ -15,3 +15,5 @@ Todos os personagens, criaturas, construções, veículos, vegetação, montanha
 - Three.js é uma dependência sob licença MIT. Consulte `node_modules/three/LICENSE`. As demais dependências mantêm suas próprias licenças.
 
 Não há serviços externos, chaves, telemetria, carregamento de recursos de CDN ou dependência de imagens remotas durante o jogo.
+
+O modo atual usa plantas e zumbis originais, criados em `src/defense/main.js`, com interface e mapa vetorial em `index.html` e `src/defense/style.css`. A simulação de defesa está em `src/defense/simulation.js`. Nenhum recurso de Plants vs. Zombies foi utilizado.

@@ -12,7 +12,7 @@ async function start(page, seed) {
       if (!localStorage.getItem("vigilia-v1"))
         localStorage.setItem("vigilia-v1", JSON.stringify(s));
     }, seed);
-  await page.goto("/");
+  await page.goto("/legacy.html");
   await page.waitForFunction(() => window.vigilia?.ready);
   await page.locator("#play").click();
   await page.evaluate(() => document.exitPointerLock());

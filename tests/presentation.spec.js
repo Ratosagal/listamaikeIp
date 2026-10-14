@@ -31,7 +31,7 @@ async function launch(page) {
       }),
     );
   });
-  await page.goto("/");
+  await page.goto("/legacy.html");
   await page.waitForFunction(() => window.vigilia?.ready);
   await page.locator("#play").click();
   await page.evaluate(() => document.exitPointerLock());

@@ -74,7 +74,7 @@ test("collecting an instanced tree removes it and preserves inventory after relo
       }),
     );
   });
-  await page.goto("/");
+  await page.goto("/legacy.html");
   await page.waitForFunction(() => window.vigilia?.ready);
   await page.evaluate(() => {
     const state = vigilia.snapshot(),

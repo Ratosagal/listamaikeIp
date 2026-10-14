@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test("hooks lift the player, release safely and recharge after landing", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/legacy.html");
   const result = await page.evaluate(async () => {
     const THREE = await import("/node_modules/.vite/deps/three.js");
     const { AerialRig } = await import("/src/systems/aerial.js");
@@ -34,7 +34,7 @@ test("hooks lift the player, release safely and recharge after landing", async (
 test("giant armor resists ground attacks and aerial nape strikes defeat it", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/legacy.html");
   const result = await page.evaluate(async () => {
     const THREE = await import("/node_modules/.vite/deps/three.js");
     const { Colossi } = await import("/src/systems/colossi.js");
@@ -104,7 +104,7 @@ test("player controls attach two hooks, gain altitude and release in the game", 
       }),
     );
   });
-  await page.goto("/");
+  await page.goto("/legacy.html");
   await page.waitForFunction(() => window.vigilia?.ready);
   await page.locator("#play").click();
   await page.evaluate(() => document.exitPointerLock());
