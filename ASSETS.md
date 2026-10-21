@@ -1,5 +1,19 @@
 # Origem dos recursos
 
+## Gisele — O Véu Partido
+
+O modo atual tem identidade própria. Gisele, Íria, Oren, Nara, as regiões, os guardiões, os votos, os diálogos, as armas e a história foram criados para este projeto. Não foram usados personagens, sprites, modelos, músicas, diálogos, mapas, logotipos ou interfaces extraídos de Hades ou Hades II.
+
+- Retrato vetorial original de Gisele: SVG criado em `src/rogue/main.js`.
+- Heroína articulada, cabelo, roupa, bastão, lâminas e arco: `src/rogue/hero.js`.
+- Arquitetura, textura de piso desenhada em canvas, inimigos e efeitos geométricos: `src/rogue/world.js`.
+- Interface original: `index.html`, `src/rogue/style.css`; favicon original: `public/favicon.svg`.
+- Música e efeitos reutilizam o sintetizador original do projeto em `src/systems/audio.js`.
+- Animação utiliza os cálculos procedurais do projeto em `src/systems/character.js`; partículas utilizam o pool de `src/systems/effects.js`.
+
+## Recursos dos modos arquivados
+
+
 Todos os personagens, criaturas, construções, veículos, vegetação, montanhas, ícones SVG e efeitos visuais deste projeto são originais e construídos por código. Nenhum modelo, personagem, nome de criatura ou recurso gráfico de Pokémon, Palworld, Project Zomboid ou Attack on Titan foi usado.
 
 - Instâncias de recursos coletáveis: `src/systems/resource-batches.js`.

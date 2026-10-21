@@ -81,7 +81,7 @@ async function launch(page, seed) {
     },
     { key: KEY, seed },
   );
-  await page.goto("/");
+  await page.goto("/defense.html");
   await page.waitForFunction(() => window.vigiliaDefense?.ready);
   await page.locator("#play").click();
 }

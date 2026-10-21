@@ -3,141 +3,132 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta name="theme-color" content="#10242b" />
+    <meta name="theme-color" content="#13131e" />
     <meta
       name="description"
-      content="Vigília: defesa urbana 3D. Explore a cidade, plante defesas e comande pelo tablet."
+      content="Gisele — O Véu Partido. Roguelike de ação isométrico com magia, três armas, votos e chefes."
     />
-    <link rel="icon" href="/favicon.svg" />
-    <title>Vigília — Jardim de Resistência</title>
+    <title>Gisele — O Véu Partido</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>
   <body>
-    <canvas id="world" aria-label="Cidade 3D de Vigília"></canvas>
+    <canvas id="world" aria-label="Mundo isométrico de Gisele"></canvas>
+    <div id="vignette" aria-hidden="true"></div>
     <div id="damage" aria-hidden="true"></div>
     <div id="feedback" aria-hidden="true"></div>
     <div id="hud" hidden>
       <header>
-        <div class="brand">◈ VIGÍLIA <small>JARDIM DE RESISTÊNCIA</small></div>
-        <div id="waveInfo"></div>
-        <button id="tabletButton">TAB / TABLET</button
-        ><button id="pause">PAUSA</button>
+        <div class="wordmark">GISELE <small>O VÉU PARTIDO</small></div>
+        <div class="room-title">
+          <span id="regionLabel"></span><strong id="roomLabel"></strong>
+        </div>
+        <div class="currencies">
+          <span id="coins"></span><span id="shards"></span
+          ><button id="pause" aria-label="Pausar">PAUSA</button>
+        </div>
       </header>
-      <aside class="status glass">
-        <span class="eyebrow">EXPLORADOR</span><b id="life"></b>
-        <div class="bar"><i id="healthBar"></i></div>
-        <span class="eyebrow">REFÚGIO</span><b id="baseLife"></b>
-        <div class="bar base"><i id="baseBar"></i></div>
-        <strong id="energy"></strong><small id="stock"></small
-        ><button id="startWave">ANTECIPAR ONDA</button>
-      </aside>
+      <div id="bossHUD" hidden>
+        <span id="bossName"></span>
+        <div class="boss-bar"><i id="bossFill"></i></div>
+        <small id="bossPhase"></small>
+      </div>
+      <aside id="boons" aria-label="Votos desta tentativa"></aside>
       <div id="notice" role="status" aria-live="polite"></div>
-      <div id="reticle">+</div>
+      <div id="roomBanner" aria-live="polite"></div>
+      <aside id="objective">
+        <span class="eyebrow">SEU CAMINHO</span>
+        <p id="objectiveText"></p>
+        <button id="actionButton"></button>
+      </aside>
       <div id="hint"></div>
       <footer>
-        <div id="seeds" class="seeds"></div>
+        <div class="hero-stats">
+          <div class="hero-name">
+            <span class="portrait-mini">G</span>
+            <div><strong>Gisele</strong><small id="weaponName"></small></div>
+          </div>
+          <div class="vital-line">
+            <span>VITALIDADE</span><b id="healthText"></b>
+          </div>
+          <div class="bar health"><i id="healthFill"></i></div>
+          <div class="vital-line"><span>MAGIA</span><b id="manaText"></b></div>
+          <div class="bar mana"><i id="manaFill"></i></div>
+          <div id="dashPips" aria-label="Esquivas disponíveis"></div>
+        </div>
+        <div class="skill-row">
+          <div>
+            <kbd>J / CLIQUE</kbd><b>Atacar</b
+            ><small>Segure: carregar · 18 magia</small>
+          </div>
+          <div>
+            <kbd>K / DIREITO</kbd><b>Especial</b
+            ><small>8 magia · carregado: +25</small>
+          </div>
+          <div>
+            <kbd>Q / L</kbd><b>Círculo arcano</b
+            ><small>20 magia · recarga 4s</small>
+          </div>
+          <div><kbd>ESPAÇO</kbd><b>Esquiva</b><small>Shift: correr</small></div>
+        </div>
         <div class="controls">
-          WASD mover · Shift correr · Espaço saltar · Clique atacar · E
-          plantar/coletar · R melhorar · F reparar · C fabricar · Tab tablet ·
-          1–3 armas
+          WASD mover · Mouse mirar · E interagir · C códice · Esc pausar
         </div>
       </footer>
+      <div id="chargeHUD" hidden>
+        <span>CANALIZANDO</span>
+        <div class="bar charge"><i id="chargeFill"></i></div>
+        <small>Solte para liberar</small>
+      </div>
     </div>
     <section id="menu" class="overlay">
-      <div class="intro">
-        <span class="eyebrow">DEFESA URBANA / UM JOGADOR</span>
-        <h1>
-          A cidade caiu.<br /><em>Faça a vida<br />resistir.</em>
-        </h1>
+      <div class="menu-copy">
+        <span class="eyebrow">UM ROGUELIKE DE AÇÃO / UM JOGADOR</span>
+        <div class="title-rule"></div>
+        <h1>GISELE</h1>
+        <h2>O Véu Partido</h2>
+        <p class="tagline">Algumas memórias se recusam a morrer.</p>
         <p>
-          Explore as ruas, plante seu jardim de defesa e proteja o refúgio.
-          Comande pelo tablet ou lute entre os canteiros.
+          Desça além dos jardins esquecidos. Domine armas e magia, enfrente os
+          guardiões da Fenda e devolva ao mundo os nomes que ele perdeu.
         </p>
-        <button id="play" class="primary">INICIAR EXPEDIÇÃO ↗</button
+        <button id="play" class="primary">
+          ENTRAR NO REFÚGIO <span>›</span></button
         ><small id="saveInfo"></small>
-        <div class="brief">
-          <span>01 <b>Explore</b></span
-          ><span>02 <b>Plante</b></span
-          ><span>03 <b>Resista</b></span>
+        <div class="menu-links">
+          <button id="menuSettings">Configurações</button
+          ><button id="menuHelp">Como jogar</button>
         </div>
-        <p class="legend">
-          Tab abre o mapa 2D e pausa a partida. As cinco sementes têm funções
-          diferentes. Plantar perto do personagem e plantar pelo tablet usam a
-          mesma energia.
-        </p>
+        <div class="menu-features">
+          <span>TRÊS ARMAS</span><span>DOZE CÂMARAS</span
+          ><span>TRÊS GUARDIÕES</span>
+        </div>
       </div>
-      <div class="hero-art">
-        <span class="eyebrow">SETOR 07 / ÚLTIMO REFÚGIO</span>
-        <div class="hero-flower">✺</div>
-        <p>TRÊS RUAS.<br />CINCO ALIADAS.<br />UM REFÚGIO.</p>
-        <span class="stamp">NATUREZA EM LINHA DE FRENTE</span>
+      <div
+        id="portraitArt"
+        class="portrait-art"
+        aria-label="Retrato original de Gisele"
+      ></div>
+      <div class="menu-bottom">
+        <span>✦ CADA TENTATIVA DEIXA UM FIO</span
+        ><span>ARTE, PERSONAGENS E TRILHA ORIGINAIS</span>
       </div>
     </section>
     <section
-      id="tablet"
+      id="panel"
       class="overlay"
       hidden
       role="dialog"
       aria-modal="true"
-      aria-labelledby="tabletTitle"
+      aria-labelledby="panelTitle"
     >
-      <div class="tablet-shell">
-        <div class="tablet-header">
-          <div>
-            <span class="eyebrow">REDE DO REFÚGIO / MUNDO PAUSADO</span>
-            <h2 id="tabletTitle">Mapa de operações</h2>
-          </div>
-          <strong id="tabletEnergy"></strong
-          ><button id="closeTablet" aria-label="Fechar tablet">×</button>
-        </div>
-        <div class="tablet-body">
-          <aside class="tablet-sidebar">
-            <p>
-              Selecione uma semente e um canteiro explorado. O círculo mostra o
-              alcance.
-            </p>
-            <div id="tabletSeeds"></div>
-            <div class="map-legend">
-              <span>● Você</span><span>● Zumbis</span
-              ><span>▧ Área não explorada</span>
-            </div>
-            <button id="tabletWave">ANTECIPAR ONDA</button>
-          </aside>
-          <div class="map-wrap">
-            <div id="map">
-              <svg
-                id="mapArt"
-                viewBox="0 0 440 720"
-                preserveAspectRatio="none"
-                aria-hidden="true"
-              ></svg>
-              <div id="mapBeds"></div>
-            </div>
-          </div>
-          <aside id="inspector" class="inspector">
-            <span class="eyebrow">CANTEIRO</span>
-            <h3>Escolha uma posição</h3>
-            <p>Explore a cidade para liberar os canteiros mais distantes.</p>
-          </aside>
-        </div>
-        <div class="tablet-bottom">
-          PLANTIO REMOTO · MESMOS CUSTOS DO PLANTIO PESSOAL · ESC OU T PARA
-          VOLTAR
-        </div>
+      <div class="panel-frame">
+        <button id="closePanel" class="close" aria-label="Fechar painel">
+          ×</button
+        ><span id="panelEyebrow" class="eyebrow"></span>
+        <h2 id="panelTitle"></h2>
+        <div id="panelBody"></div>
       </div>
     </section>
-    <section
-      id="modal"
-      class="overlay"
-      hidden
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modalTitle"
-    >
-      <div class="dialog glass">
-        <h2 id="modalTitle"></h2>
-        <div id="modalBody"></div>
-      </div>
-    </section>
-    <script type="module" src="/src/defense/main.js"></script>
+    <script type="module" src="/src/rogue/main.js"></script>
   </body>
 </html>

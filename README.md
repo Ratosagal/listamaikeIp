@@ -1,73 +1,86 @@
-# Vigília — Jardim de Resistência
+# Gisele — O Véu Partido
 
-Defesa urbana 3D para navegador, com personagem controlável e planejamento por tablet 2D. Explore um bairro abandonado, plante defesas nas três ruas e impeça os zumbis de alcançar o refúgio. Esta é a versão atual do jogo: plantas substituem captura e criaturas companheiras. Os modelos e interfaces são originais.
+Roguelike de ação isométrico para navegador. Gisele atravessa três regiões da Fenda em busca das memórias de sua irmã. Combate em tempo real, armas com combos e golpes carregados, círculo arcano, esquiva, votos aleatórios, mercador, chefes e progressão permanente. Personagens, história, arte, modelos, interface e áudio são originais.
 
-## Executar
+Esta versão entrega uma campanha de doze câmaras: nove encontros de combate, incluindo três guardiões, e três descansos. Ela substitui a defesa urbana como página principal. Não é uma reprodução integral do conteúdo ou dos recursos de Hades II; as referências são o gênero, a perspectiva e o ciclo de combate, escolhas e retorno ao refúgio.
 
-Requer Node.js 22 ou superior.
+## Executar e publicar
+
+Requer Node.js 22.12+.
 
 ```sh
 npm ci
 npm run dev
 ```
 
-Para gerar o site:
-
 ```sh
 npm run build
 ```
 
-No Vercel: preset Vite, comando `npm run build`, diretório de saída `dist`. O jogo não precisa de servidor de aplicação, chaves ou serviços externos.
+No Vercel, use preset Vite, comando `npm run build` e saída `dist`. O jogo é estático e não exige chaves, API ou servidor de aplicação. Não há downloads de modelos, fontes, imagens ou áudio durante a partida.
 
-## Jogar
+## A jornada
 
-O bairro tem três rotas de ataque e quinze canteiros. O jogador começa no refúgio com 180 de energia, espada, arco e materiais. A primeira onda chega após 60 segundos de simulação; é possível antecipá-la. Vencer uma onda dá 50 de energia e oito sucatas, com 40 segundos para preparar a próxima. As ondas aumentam em número de inimigos, resistência e dano. Cada zumbi derrotado rende 12 de energia.
+No **Átrio dos Fios**, escolha uma das três armas e converse com Íria, Oren e Nara. O botão “Preparar incursão” também dá acesso a armas, memórias e diálogos. Atravesse o Véu para iniciar uma tentativa.
 
-| Planta | Função | Custo |
-|---|---|---|
-| Brotadora | Dispara projéteis na rua | 40 energia |
-| Casca | Bloqueia zumbis com muita vida | 30 energia |
-| Estopim | Explode quando inimigos se aproximam; uso único | 70 energia |
-| Névoa | Dispara e desacelera inimigos | 60 energia |
-| Aurora | Gera energia periodicamente | 50 energia |
+| Região | Guardião |
+|---|---|
+| Jardins do Silêncio | O Vigia de Basalto: impactos e ondas pelo chão |
+| Arquivo Submerso | A Curadora do Breu: projéteis radiais e ataques marcados |
+| Coração da Fenda | O Oráculo Oco: ondas consecutivas e rajadas densas |
 
-Todas as plantas podem ser melhoradas até o nível três. Melhorias aumentam vida, dano ou produção; reparos custam dez de energia e duas madeiras. Remover uma planta recupera 40% do custo inicial. Zumbis mordem plantas no caminho. Inimigos que atravessam a defesa causam 35 de dano ao refúgio, que começa com 500 de integridade. Quando ele cai, a expedição termina e pode ser reiniciada.
+Cada região tem um encontro, uma batalha de elite em duas levas, um descanso com mercador e um guardião. As arenas variam os obstáculos; inimigos e escolhas de votos usam uma sequência aleatória que persiste no save. Os chefes ficam mais perigosos abaixo de metade da vida.
+
+Ao superar um encontro, receba um voto e escolha uma passagem: 15 óbolos ou 18 de vida. No descanso, uma infusão recupera 45 de vida por 30 óbolos; um voto aleatório custa 65. Os doze votos podem ganhar até três níveis e modificam dano, alcance, mobilidade, regeneração, queimadura, lentidão, cadeia elétrica, círculo, proteção e recuperação de vida.
+
+| Arma | Estilo |
+|---|---|
+| Bastão de Âmbar | Alcance corpo a corpo e combo de três golpes |
+| Lâminas do Crepúsculo | Ataques rápidos e especiais em leque |
+| Arco Astral | Combate à distância e disparos carregados que atravessam inimigos |
+
+Inimigos derrotados concedem óbolos e fragmentos. Ao morrer ou vencer, os fragmentos são guardados uma única vez. Óbolos e votos terminam com a tentativa. No refúgio, compre vida máxima, magia e regeneração, dano permanente ou uma recuperação de vida por tentativa. Gisele pode então partir novamente, com outra arma e novas combinações.
+
+## Controles
 
 | Controle | Ação |
 |---|---|
-| WASD / Shift | Mover / correr |
-| Espaço | Saltar |
-| Mouse / botão direito | Mirar com mouse capturado / arrastar para olhar ao redor |
-| Roda do mouse | Ajustar distância da câmera |
-| Clique esquerdo | Atacar; segurar repete golpes ou disparos |
-| 1 / 2 / 3 | Espada / arco / pistola fabricada |
-| E | Plantar no canteiro próximo ou coletar recursos |
-| Q | Alternar a semente selecionada |
-| R / F | Melhorar / reparar a planta próxima |
-| Tab ou T | Abrir tablet |
-| Escape ou T | Fechar tablet; Escape também pausa o jogo |
-| C | Abrir bancada; fabricação exige proximidade do refúgio |
+| WASD | Mover na orientação da tela |
+| Shift | Correr |
+| Mouse | Mirar |
+| Clique esquerdo ou J | Atacar; segurar 0,65s e soltar libera ataque carregado por 18 de magia |
+| Clique direito ou K | Especial por 8 de magia; segurar e soltar acrescenta uma versão carregada por 25 |
+| Q ou L | Círculo arcano por 20 de magia; desacelera e causa dano contínuo |
+| Espaço | Esquivar; duas cargas, com recuperação automática e invulnerabilidade breve |
+| E | Conversar, recolher voto ou atravessar uma passagem, conforme o contexto |
+| C | Códice de Nara |
+| Escape | Pausar ou fechar painel; a escolha de voto e os resultados precisam ser concluídos |
+| Roda do mouse | Ajustar aproximação da câmera |
 
-Selecione sementes pela barra inferior ou pelo tablet. A prévia no chão indica o canteiro próximo. No tablet, escolha a semente e um canteiro explorado, veja alcance e custo e confirme. Canteiros ocupados oferecem melhoria, reparo e remoção. Ambos os métodos usam o mesmo sistema de custos e validação. O tablet pausa a simulação; Tab navega pelos seus controles, e Escape ou T retorna ao jogo.
+J e K usam o inimigo mais próximo quando a mira do mouse não está ativa. Correr não concede invulnerabilidade. Círculos de preparação, projéteis e marcas no chão permitem antecipar ataques. Pilares bloqueiam movimento e projéteis. O mundo pausa em painéis, configurações e escolhas.
 
-Explorar revela novos canteiros. O mapa mostra edifícios, ruas, refúgio, posição do jogador e inimigos em regiões reveladas. A bancada também afia a espada até o nível três, aumentando o dano. Recursos de madeira, pedra e sucata ficam nas áreas verdes laterais. O inventário pertence ao jogador. Ao morrer, ele retorna ao refúgio com inventário intacto e cinco segundos de proteção; o refúgio perde 20 de integridade. Perto dele, a vida recupera gradualmente.
+## Salvamento e configurações
 
-## Visual e desempenho
+Progresso automático em `gisele-veil-v1`, no localStorage deste navegador. Vida, magia, inimigos, câmara, arma, votos, ofertas pendentes, sequência aleatória, conversas e melhorias persistem. Projéteis e marcas de ataque transitórios são descartados ao recarregar, com proteção breve para retomar. Um save inválido é preservado em uma chave de recuperação antes de criar uma jornada limpa.
 
-Humanoide articulado original com rosto, cabelo, vestuário, mochila e equipamento. Animações procedurais misturam caminhada, corrida, respiração, ataque, salto e aterrissagem. Cidade com fachadas desgastadas, iluminação atmosférica, árvores, asfalto molhado, sombras e plantas tridimensionais. Os perfis Leve, Equilibrado e Alta estão no menu de pausa. Leve desativa sombras e reduz a resolução. Arquitetura imóvel é agrupada por material e região; partículas têm um pool limitado. Modelos são estilizados e procedurais, não recursos fotográficos.
+O save dos modos anteriores não é apagado nem convertido. `defense.html` e `legacy.html` permanecem no repositório para regressão e consulta; o build de produção usa a página principal de Gisele. A documentação anterior está em [docs/urban-defense.md](docs/urban-defense.md) e [docs/legacy-game.md](docs/legacy-game.md).
 
-## Salvamento
+Qualidade Leve, Equilibrada e Alta, volumes separados, partículas, feedback de dano e alto contraste estão nas configurações. Tremor permanece desligado por padrão.
 
-Progresso salvo automaticamente no localStorage, em `vigilia-city-defense-v1`. Plantas, níveis, danos, canteiros explorados, recursos coletados, ondas ativas, inimigos, energia e inventário persistem. O save de sobrevivência anterior permanece intacto em `vigilia-v1`; materiais compatíveis são importados uma vez ao iniciar o novo modo. Um save inválido é preservado em uma chave de recuperação antes de iniciar uma partida limpa.
+## Arquitetura e verificação
 
-## Verificação
+- `src/rogue/simulation.js`: combate, inimigos, padrões de chefe, progressão, economia e validação de saves; sem dependências gráficas.
+- `src/rogue/hero.js`: humanoide feminino articulado original, roupa, cabelo, armas e animações.
+- `src/rogue/world.js`: arenas, materiais, iluminação, inimigos, sinais de ataque e descarte de recursos gráficos.
+- `src/rogue/main.js`: câmera isométrica, controles, menus, diálogos, áudio e persistência.
 
 ```sh
+npx playwright test tests/rogue.spec.js
 npm test
 ```
 
-Playwright usa Chromium em `/usr/bin/chromium`, servido por Vite. `tests/defense.spec.js` verifica custos, exploração, efeitos das cinco plantas, ondas, tablet, fabricação, combate e salvamento. Os testes anteriores acessam `legacy.html`, mantido para regressão do humanoide, ganchos e sistemas anteriores. O build de produção publica somente o novo modo pela página principal. A documentação anterior está em [docs/legacy-game.md](docs/legacy-game.md).
+Playwright usa Chromium em `/usr/bin/chromium` e inicia Vite automaticamente. A suíte do novo modo verifica combate real pelo teclado, carga, magia, invulnerabilidade, colisão, progressão pelas doze câmaras, padrões dos três chefes, compras permanentes, retorno, salvamento, diálogos, qualidade gráfica e janelas compactas. Os testes anteriores acessam as páginas arquivadas.
 
-## Limites desta versão
+## Escopo atual
 
-Um jogador, um bairro, três ruas e cinco plantas. Plantio restrito a canteiros; edifícios não têm interiores. Teclado e mouse, sem comandos de toque ou gamepad. A simulação é separada da renderização e serializável; multiplayer ainda exige servidor e sincronização. O desempenho deve ser conferido nos dispositivos de destino.
+Campanha compacta de um jogador, três armas, doze votos, quatro arquétipos comuns e três chefes. Arte 3D e retratos estilizados procedurais/vetoriais, trilha sintetizada e diálogos em texto. Não inclui dublagem, multiplayer, comandos de toque, gamepad, romance, pesca ou a quantidade de conteúdo de um roguelike comercial. O desempenho deve ser conferido nos dispositivos de destino. Veja [ASSETS.md](ASSETS.md) para a origem dos recursos.
