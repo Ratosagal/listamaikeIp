@@ -13,7 +13,7 @@ export default defineConfig({
     baseURL: "http://127.0.0.1:5173",
     headless: true,
     launchOptions: {
-      executablePath: "/usr/bin/chromium",
+      executablePath: process.env.CI ? undefined : "/usr/bin/chromium",
       args: ["--no-sandbox", "--enable-unsafe-swiftshader"],
     },
   },

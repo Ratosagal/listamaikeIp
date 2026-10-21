@@ -1,4 +1,4 @@
-# Gisele — O Véu Partido
+# Gisele — O Véu Partido · 1.0.0
 
 Roguelike de ação isométrico para navegador. Gisele atravessa três regiões da Fenda em busca das memórias de sua irmã. Combate em tempo real, armas com combos e golpes carregados, círculo arcano, esquiva, votos aleatórios, mercador, chefes e progressão permanente. Personagens, história, arte, modelos, interface e áudio são originais.
 
@@ -41,6 +41,10 @@ Ao superar um encontro, receba um voto e escolha uma passagem: 15 óbolos ou 18 
 
 Inimigos derrotados concedem óbolos e fragmentos. Ao morrer ou vencer, os fragmentos são guardados uma única vez. Óbolos e votos terminam com a tentativa. No refúgio, compre vida máxima, magia e regeneração, dano permanente ou uma recuperação de vida por tentativa. Gisele pode então partir novamente, com outra arma e novas combinações.
 
+## Desfecho e Ascensões
+
+A vitória libera um epílogo de três cenas e créditos, disponíveis novamente no refúgio. Cada vitória na dificuldade mais alta libera a Ascensão seguinte, até 5: cada nível acrescenta 12% à vida e 10% ao dano dos inimigos. Escolha a intensidade antes de partir. O códice guarda as dez últimas tentativas, com arma, duração, câmara e resultado.
+
 ## Controles
 
 | Controle | Ação |
@@ -61,7 +65,7 @@ J e K usam o inimigo mais próximo quando a mira do mouse não está ativa. Corr
 
 ## Salvamento e configurações
 
-Progresso automático em `gisele-veil-v1`, no localStorage deste navegador. Vida, magia, inimigos, câmara, arma, votos, ofertas pendentes, sequência aleatória, conversas e melhorias persistem. Projéteis e marcas de ataque transitórios são descartados ao recarregar, com proteção breve para retomar. Um save inválido é preservado em uma chave de recuperação antes de criar uma jornada limpa.
+Progresso automático em `gisele-veil-v1`, no localStorage deste navegador. Vida, magia, inimigos, câmara, arma, votos, ofertas pendentes, sequência aleatória, conversas e melhorias persistem. Projéteis e marcas de ataque transitórios são descartados ao recarregar, com proteção breve para retomar. Um save inválido é preservado em uma chave de recuperação. A cópia anterior válida é recuperada automaticamente quando disponível. Em Configurações → Backup do progresso, exporte um JSON ou importe uma cópia com confirmação; dados inválidos não substituem a partida atual.
 
 O save dos modos anteriores não é apagado nem convertido. `defense.html` e `legacy.html` permanecem no repositório para regressão e consulta; o build de produção usa a página principal de Gisele. A documentação anterior está em [docs/urban-defense.md](docs/urban-defense.md) e [docs/legacy-game.md](docs/legacy-game.md).
 
@@ -75,11 +79,11 @@ Qualidade Leve, Equilibrada e Alta, volumes separados, partículas, feedback de 
 - `src/rogue/main.js`: câmera isométrica, controles, menus, diálogos, áudio e persistência.
 
 ```sh
-npx playwright test tests/rogue.spec.js
-npm test
+npm test # campanha atual e recursos da versão 1.0
+npm run test:all # inclui modos arquivados
 ```
 
-Playwright usa Chromium em `/usr/bin/chromium` e inicia Vite automaticamente. A suíte do novo modo verifica combate real pelo teclado, carga, magia, invulnerabilidade, colisão, progressão pelas doze câmaras, padrões dos três chefes, compras permanentes, retorno, salvamento, diálogos, qualidade gráfica e janelas compactas. Os testes anteriores acessam as páginas arquivadas.
+Playwright usa Chromium em `/usr/bin/chromium` localmente e o navegador instalado pelo Playwright no CI e inicia Vite automaticamente. A suíte do novo modo verifica combate real pelo teclado, carga, magia, invulnerabilidade, colisão, progressão pelas doze câmaras, padrões dos três chefes, compras permanentes, retorno, salvamento, diálogos, qualidade gráfica e janelas compactas. Os testes anteriores acessam as páginas arquivadas.
 
 ## Escopo atual
 

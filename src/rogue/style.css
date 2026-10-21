@@ -991,3 +991,33 @@ footer {
     padding: 15px;
   }
 }
+
+.ending-art {
+  text-align: center;
+  font-size: 5rem;
+  color: var(--gold, #d8bd89);
+  padding: 1rem;
+  text-shadow: 0 0 65px #91d9c4;
+}
+.attempt-history {
+  border-top: 1px solid #ffffff22;
+  margin-top: 24px;
+  padding-top: 16px;
+}
+.panel-actions select {
+  max-width: 100%;
+  margin: 8px;
+  padding: 10px;
+  background: #181c28;
+  color: #eee;
+  border: 1px solid #8e8062;
+}
+#panelBody blockquote {
+  font-size: clamp(1.1rem, 2vw, 1.5rem);
+  line-height: 1.8;
+}
+#importSave {
+  display: block;
+  margin-top: 14px;
+  max-width: 100%;
+}

@@ -172,6 +172,11 @@ export function freshState(seed = 931207) {
     weapon: "staff",
     upgrades: { vitality: 0, channel: 0, power: 0, resolve: 0 },
     conversations: {},
+    difficulty: 0,
+    ascension: 0,
+    epilogueSeen: false,
+    tutorialSeen: false,
+    records: [],
   };
   return {
     version: 1,
@@ -250,6 +255,36 @@ export function restore(raw) {
     s.meta.conversations && typeof s.meta.conversations === "object"
       ? s.meta.conversations
       : {};
+  s.meta.difficulty = clamp(Math.floor(finite(s.meta.difficulty)), 0, 5);
+  s.meta.ascension = clamp(Math.floor(finite(s.meta.ascension)), 0, 5);
+  s.meta.difficulty = Math.min(s.meta.difficulty, s.meta.ascension);
+  s.meta.epilogueSeen = !!s.meta.epilogueSeen;
+  s.meta.tutorialSeen = !!s.meta.tutorialSeen;
+  s.meta.records = Array.isArray(s.meta.records)
+    ? s.meta.records
+        .filter(
+          (r) =>
+            r &&
+            WEAPONS[r.weapon] &&
+            Number.isFinite(r.room) &&
+            Number.isFinite(r.kills),
+        )
+        .slice(0, 10)
+        .map((r) => ({
+          win: !!r.win,
+          weapon: r.weapon,
+          room: clamp(Math.floor(r.room), 1, 12),
+          kills: clamp(Math.floor(r.kills), 0, 9999),
+          duration: Math.max(0, finite(r.duration)),
+          difficulty: clamp(Math.floor(finite(r.difficulty)), 0, 5),
+        }))
+    : [];
+  s.meta.conversations = Object.fromEntries(
+    ["iria", "oren", "nara"].map((key) => [
+      key,
+      clamp(Math.floor(finite(s.meta.conversations[key])), 0, 2),
+    ]),
+  );
   const h = heroFor(s.meta);
   for (const key of Object.keys(h)) h[key] = finite(s.hero[key], h[key]);
   h.x = clamp(h.x, -11.8, 11.8);
@@ -260,7 +295,9 @@ export function restore(raw) {
   h.mana = clamp(h.mana, 0, h.maxMana);
   h.dashes = clamp(Math.floor(h.dashes), 0, 2);
   h.dash = 0;
-  h.invuln = Math.max(0.6, h.invuln);
+  h.invuln = clamp(h.invuln, 0.6, 2);
+  h.revives = clamp(Math.floor(h.revives), 0, s.meta.upgrades.resolve);
+  h.vx = h.vz = 0;
   s.hero = h;
   s.time = Math.max(0, finite(s.time));
   s.rng = finite(s.rng, 931207) >>> 0;
@@ -277,7 +314,14 @@ export function restore(raw) {
         .filter(([key]) => key in BOONS)
         .map(([k, v]) => [k, clamp(Math.floor(finite(v)), 0, 3)]),
     );
-    s.run.offers = (s.run.offers || []).filter((k) => k in BOONS);
+    s.run.offers = [
+      ...new Set(
+        (Array.isArray(s.run.offers) ? s.run.offers : []).filter(
+          (k) => k in BOONS,
+        ),
+      ),
+    ].slice(0, 3);
+    s.run.difficulty = clamp(Math.floor(finite(s.run.difficulty)), 0, 5);
     s.run.wave = clamp(Math.floor(finite(s.run.wave)), 0, 3);
     s.run.remaining = clamp(Math.floor(finite(s.run.remaining)), 0, 3);
     s.run.next = Math.max(0, finite(s.run.next));
@@ -310,11 +354,40 @@ export function restore(raw) {
       burn: 0,
       tick: 0,
       motion: finite(e.motion),
+      targetX: clamp(finite(e.targetX, s.hero.x), -11, 11),
+      targetZ: clamp(finite(e.targetZ, s.hero.z), -8, 8),
+      knock: 0,
       damage: Math.max(1, finite(e.damage, e.type === "boss" ? 22 : 8)),
       speed: Math.max(0, Math.min(5, finite(e.speed, 2))),
     }));
   if (s.phase === "reward" && !s.run.offers.length)
     throw Error("Votos ausentes");
+  if (s.phase === "hub") {
+    s.run = null;
+    s.enemies = [];
+    s.hero = heroFor(s.meta);
+  }
+  const blocked = (point, r) =>
+    Math.abs(point.x) > 12 - r ||
+    Math.abs(point.z) > 9 - r ||
+    pillarsFor(s.run?.room || 0).some(
+      (p) => Math.hypot(point.x - p.x, point.z - p.z) < p.r + r,
+    );
+  if (blocked(s.hero, 0.4)) {
+    s.hero.x = 0;
+    s.hero.z = 6;
+  }
+  for (const enemy of s.enemies)
+    if (blocked(enemy, enemy.type === "boss" ? 0.9 : 0.4)) {
+      enemy.x = 0;
+      enemy.z = -4;
+    }
+  if (["death", "victory"].includes(s.phase) && !s.run.banked)
+    throw Error("Resultado incompleto");
+  if (s.phase === "combat" && s.hero.hp === 0) {
+    s.hero.hp = 1;
+    s.hero.invuln = 2;
+  }
   s.shots = [];
   s.hazards = [];
   s.fields = [];
@@ -391,6 +464,7 @@ export class Rogue {
       banked: false,
       path: "gold",
       started: s.time,
+      difficulty: s.meta.difficulty,
     };
     this.enter();
     return true;
@@ -442,7 +516,9 @@ export class Rogue {
       z = -4;
     }
     const hp =
-      stats[0] * (type === "boss" ? 1 : 1 + region * 0.3 + (elite ? 0.12 : 0));
+      stats[0] *
+      (type === "boss" ? 1 : 1 + region * 0.3 + (elite ? 0.12 : 0)) *
+      (1 + (s.run.difficulty || 0) * 0.12);
     s.enemies.push({
       id: ++s.id,
       type,
@@ -450,7 +526,9 @@ export class Rogue {
       z,
       hp,
       maxHp: hp,
-      damage: stats[1] + region * 2,
+      damage: Math.round(
+        (stats[1] + region * 2) * (1 + (s.run.difficulty || 0) * 0.1),
+      ),
       speed: stats[2],
       phase: "hunt",
       timer: 0,
@@ -528,7 +606,7 @@ export class Rogue {
       1,
       Math.round(amount * (1 - this.rank("aegis") * 0.12)),
     );
-    h.hp -= actual;
+    h.hp = Math.max(0, h.hp - actual);
     h.invuln = 0.65;
     this.emit("hurt", { damage: actual });
     if (h.hp <= 0) {
@@ -711,6 +789,7 @@ export class Rogue {
     const s = this.s;
     if (!["exit", "shop"].includes(s.phase)) return false;
     if (s.run.room >= 12) return false;
+    if (!["gold", "heal"].includes(path)) return false;
     s.run.path = path;
     if (path === "heal") s.hero.hp = Math.min(s.hero.maxHp, s.hero.hp + 18);
     else s.run.coins += 15;
@@ -721,6 +800,7 @@ export class Rogue {
   buy(item) {
     const s = this.s;
     if (s.phase !== "shop") return "A loja fica no descanso de cada região.";
+    if (!["heal", "boon"].includes(item)) return "Escolha uma oferta válida.";
     const cost = item === "heal" ? 30 : 65;
     if (s.run.coins < cost) return "Óbolos insuficientes.";
     if (item === "heal" && s.hero.hp >= s.hero.maxHp)
@@ -762,6 +842,22 @@ export class Rogue {
     s.run.banked = true;
     s.meta.shards += s.run.shards;
     s.meta[win ? "wins" : "deaths"]++;
+    if (win)
+      s.meta.ascension = Math.max(
+        s.meta.ascension || 0,
+        Math.min(5, (s.run.difficulty || 0) + 1),
+      );
+    s.meta.records = [
+      {
+        win,
+        weapon: s.run.weapon,
+        room: s.run.room,
+        kills: s.run.kills,
+        duration: Math.max(0, s.time - s.run.started),
+        difficulty: s.run.difficulty || 0,
+      },
+      ...(s.meta.records || []),
+    ].slice(0, 10);
     s.phase = win ? "victory" : "death";
     s.shots = [];
     s.hazards = [];

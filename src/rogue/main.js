@@ -1,15 +1,6 @@
 import * as THREE from "three";
 import "./style.css";
-import {
-  Rogue,
-  KEY,
-  WEAPONS,
-  BOONS,
-  UPGRADES,
-  REGIONS,
-  freshState,
-  restore,
-} from "./simulation.js";
+import { Rogue, WEAPONS, BOONS, UPGRADES, REGIONS } from "./simulation.js";
 import { createGisele, animateGisele } from "./hero.js";
 import {
   buildStage,
@@ -19,6 +10,13 @@ import {
   glow,
   disposeActor,
 } from "./world.js";
+import {
+  readProgress,
+  writeProgress,
+  exportProgress,
+  importProgress,
+  RELEASE,
+} from "./storage.js";
 import { Feedback } from "../systems/effects.js";
 import { Soundscape } from "../systems/audio.js";
 import {
@@ -28,17 +26,22 @@ import {
 } from "../systems/preferences.js";
 const $ = (id) => document.getElementById(id),
   settings = clampPreferences(loadPreferences());
-let state = freshState(Date.now() >>> 0),
-  recovery = false;
+let progressStorage;
 try {
-  const raw = localStorage.getItem(KEY);
-  if (raw) state = restore(raw);
+  progressStorage = window.localStorage;
 } catch {
-  recovery = true;
-  try {
-    localStorage.setItem(KEY + "-recovery", localStorage.getItem(KEY) || "");
-  } catch {}
+  progressStorage = {
+    getItem() {
+      throw Error("Storage unavailable");
+    },
+    setItem() {
+      throw Error("Storage unavailable");
+    },
+  };
 }
+const loadedProgress = readProgress(progressStorage);
+let state = loadedProgress.state,
+  recovery = loadedProgress.recovered;
 const scene = new THREE.Scene();
 let renderer;
 try {
@@ -152,7 +155,7 @@ function notify(text) {
 function save() {
   if (!running) return;
   try {
-    localStorage.setItem(KEY, JSON.stringify(state));
+    writeProgress(progressStorage, state);
   } catch {
     notify("Não foi possível salvar. Verifique o armazenamento do navegador.");
   }
@@ -383,13 +386,16 @@ function openPanel(mode, eyebrow, title) {
   $("panel").hidden = false;
   $("panelEyebrow").textContent = eyebrow;
   $("panelTitle").textContent = title;
-  $("closePanel").hidden = ["reward", "result"].includes(mode);
+  $("closePanel").hidden = ["reward", "result", "epilogue", "credits"].includes(
+    mode,
+  );
   save();
 }
 function closePanel() {
   if (
     (panel === "reward" && state.phase === "reward") ||
-    (panel === "result" && ["death", "victory"].includes(state.phase))
+    (["result", "epilogue", "credits"].includes(panel) &&
+      ["death", "victory"].includes(state.phase))
   )
     return;
   panel = null;
@@ -431,6 +437,18 @@ function showHub() {
   $("iriaButton").onclick = () => showDialogue("iria");
   $("naraButton").onclick = showCodex;
   $("depart").onclick = beginRun;
+  const options = document.createElement("div");
+  options.className = "panel-actions";
+  options.innerHTML = `<label>Intensidade da Fenda <select id="difficulty">${Array.from({ length: state.meta.ascension + 1 }, (_, i) => `<option value="${i}">${i === 0 ? "Jornada original" : `Ascensão ${i} · +${i * 12}% vida / +${i * 10}% dano inimigo`}</option>`).join("")}</select></label><button id="guideButton">Guia de combate</button>${state.meta.wins ? '<button id="endingReview">Rever desfecho</button>' : ""}`;
+  $("panelBody").append(options);
+  $("difficulty").value = state.meta.difficulty;
+  $("difficulty").onchange = () => {
+    state.meta.difficulty = Number($("difficulty").value);
+    save();
+  };
+  $("guideButton").onclick = showHelp;
+  if ($("endingReview")) $("endingReview").onclick = () => showEpilogue(0);
+
   focusPanel();
 }
 function showUpgrades() {
@@ -520,6 +538,13 @@ function showResult(win) {
   );
   $("panelBody").innerHTML =
     `<p>${win ? "O Oráculo silencia. Gisele leva a primeira lembrança de Aurora de volta ao Átrio. A Fenda ainda guarda outras histórias." : "Gisele desperta no Átrio. Os votos se desfizeram, mas os fragmentos e a memória de cada encontro continuam com ela."}</p><div class="result-grid"><div><b>${state.run.room}/12</b><small>Câmara alcançada</small></div><div><b>${state.run.kills}</b><small>Inimigos vencidos</small></div><div><b>${state.run.shards}</b><small>Fragmentos guardados</small></div><div><b>${Object.values(state.run.boons).reduce((a, b) => a + b, 0)}</b><small>Votos recebidos</small></div></div><p>Fragmentos permanentes: ${state.meta.shards} · Tentativas: ${state.meta.attempts} · Vitórias: ${state.meta.wins}</p><button id="returnHub" class="primary">Despertar no refúgio ›</button>`;
+  if (win) {
+    const button = document.createElement("button");
+    button.textContent = "O reencontro · desfecho";
+    button.id = "endingButton";
+    button.onclick = () => showEpilogue(0);
+    $("panelBody").prepend(button);
+  }
   $("returnHub").onclick = () => {
     model.hub();
     panel = null;
@@ -531,10 +556,119 @@ function showResult(win) {
   };
   focusPanel();
 }
+function showEpilogue(page = 0) {
+  const pages = [
+    [
+      "Um nome atravessa o silêncio",
+      "Aurora não espera do outro lado de uma porta. Ela está no fio que Gisele trouxe: uma lembrança inteira, livre da voz do Oráculo. Pela primeira vez, Gisele recorda o riso da irmã sem ouvir a Fenda.",
+    ],
+    [
+      "Aquilo que escolhemos guardar",
+      "Íria prende o fio no centro do Átrio. Não devolve o passado. Abre um caminho para que os esquecidos voltem a ter nomes. Gisele deixa a arma no chão e permanece ali até o amanhecer.",
+    ],
+    [
+      "O Véu Partido",
+      "A jornada de Gisele termina com uma escolha: guardar a memória sem aprisioná-la. Além do Átrio, outros fios aguardam. Você concluiu a campanha. As Ascensões permitem revisitá-la com inimigos mais resistentes e perigosos.",
+    ],
+  ];
+  openPanel("epilogue", "DESFECHO DA CAMPANHA", pages[page][0]);
+  $("panelBody").innerHTML =
+    `<div class="ending-art">✦</div><blockquote>${pages[page][1]}</blockquote><p>${page + 1} / 3</p><button id="endingNext" class="primary">${page === 2 ? "Créditos" : "Continuar"}</button>`;
+  $("endingNext").onclick = () => {
+    if (page < 2) showEpilogue(page + 1);
+    else {
+      state.meta.epilogueSeen = true;
+      save();
+      showCredits();
+    }
+  };
+  focusPanel();
+}
+function showCredits() {
+  openPanel(
+    "credits",
+    "GISELE · VERSÃO " + RELEASE,
+    "Obrigada por atravessar.",
+  );
+  $("panelBody").innerHTML =
+    '<p>O Véu Partido é um jogo original de ação e fantasia: personagens, narrativa, cenários procedurais e modelos construídos para esta experiência. Renderização com Three.js, distribuição com Vite.</p><p>Campanha: 12 câmaras, três guardiões e cinco níveis de Ascensão. Seu progresso permanece neste navegador; use o backup para levá-lo a outro dispositivo.</p><button id="creditsBack" class="primary">Continuar</button>';
+  $("creditsBack").onclick = () =>
+    state.phase === "victory" ? showResult(true) : showHub();
+  focusPanel();
+}
+function showProgress() {
+  openPanel("progress", "SEU PROGRESSO", "Leve seus fios com você.");
+  $("panelBody").innerHTML =
+    '<p>O salvamento é local e mantém uma cópia anterior para recuperação. Exporte regularmente: limpar os dados do navegador apaga os saves locais.</p><div class="stack"><button id="exportSave">Exportar progresso (.json)</button><label>Importar backup<input id="importSave" type="file" accept=".json,application/json"></label><p id="importStatus" role="status"></p><button id="progressBack">Voltar às configurações</button></div>';
+  $("exportSave").onclick = () => {
+    const url = URL.createObjectURL(
+      new Blob([exportProgress(state)], { type: "application/json" }),
+    );
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "gisele-progresso.json";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  $("importSave").onchange = async (e) => {
+    try {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (file.size > 1024 * 1024) throw Error("O arquivo deve ter até 1 MB.");
+      const candidate = importProgress(await file.text());
+      $("importStatus").textContent =
+        `Backup válido: ${candidate.meta.attempts} tentativas, ${candidate.meta.wins} vitórias. Importar substitui o progresso atual; exporte antes para guardá-lo.`;
+      const button = document.createElement("button");
+      button.textContent = "Confirmar importação";
+      button.id = "confirmImport";
+      $("confirmImport")?.remove();
+      $("panelBody").append(button);
+      button.onclick = () => {
+        try {
+          writeProgress(progressStorage, candidate);
+          state = candidate;
+          model.s = state;
+          recovery = false;
+          clearInputs();
+          stageKey = "";
+          refreshStage();
+          updateHUD();
+          closePanel();
+          running = false;
+          $("hud").hidden = true;
+          $("menu").hidden = false;
+          updateSaveLabel();
+          notify("Progresso importado.");
+        } catch {
+          notify("Não foi possível gravar o backup.");
+        }
+      };
+    } catch {
+      $("importStatus").textContent =
+        "Arquivo inválido. Seu progresso atual foi preservado.";
+      $("confirmImport")?.remove();
+    }
+  };
+  $("progressBack").onclick = showSettings;
+  focusPanel();
+}
 function showCodex() {
   openPanel("codex", "CARTOGRAFIA DO IMPOSSÍVEL", "Os nomes que ficam");
   $("panelBody").innerHTML =
     `<p>${state.meta.attempts} tentativas · ${state.meta.deaths} retornos · ${state.meta.wins} vitórias · Melhor câmara: ${state.meta.best}/12</p><div class="codex">${REGIONS.map((r, i) => `<article><small>REGIÃO ${i + 1} / ${state.meta.best > i * 4 ? "DESCOBERTA" : "AINDA ALÉM DO VÉU"}</small><h3>${r.name}</h3><p>${r.subtitle}</p><p>Guardião: ${state.meta.best >= i * 4 + 4 ? r.boss : "Sua presença ainda não tem um nome."}</p></article>`).join("")}<article><small>GUIA DE COMBATE</small><h3>Conheça o intervalo.</h3><p>Os círculos vermelhos anunciam ataques. Esquive para atravessar projéteis e ondas. O círculo arcano retém os inimigos e causa dano contínuo. Correr não concede invulnerabilidade.</p></article></div><div class="panel-actions"><button id="codexBack">Voltar</button></div>`;
+  if (state.meta.records.length) {
+    const history = document.createElement("div");
+    history.className = "attempt-history";
+    history.innerHTML =
+      "<h3>Últimas travessias</h3>" +
+      state.meta.records
+        .map(
+          (r) =>
+            `<p>${r.win ? "Vitória" : "Retorno"} · ${WEAPONS[r.weapon].name} · Câmara ${r.room}/12 · ${r.kills} inimigos · ${Math.floor(r.duration / 60)}min · Ascensão ${r.difficulty}</p>`,
+        )
+        .join("");
+    $("panelBody").append(history);
+  }
   $("codexBack").onclick = closePanel;
   focusPanel();
 }
@@ -550,7 +684,8 @@ function showSettings() {
   openPanel("settings", "CONFIGURAÇÕES", "O seu jeito de atravessar.");
   panelReturn = previous;
   $("panelBody").innerHTML =
-    `<div class="settings-grid"><label>Qualidade gráfica<select id="quality"><option value="low">Leve</option><option value="medium">Equilibrada</option><option value="high">Alta</option></select></label><label>Volume da música<input id="music" type="range" min="0" max="1" step=".05" value="${settings.music}"></label><label>Volume dos efeitos<input id="sound" type="range" min="0" max="1" step=".05" value="${settings.effects}"></label><label><span><input id="flashes" type="checkbox" ${settings.flashes ? "checked" : ""}> Feedback de dano</span></label><label><span><input id="particles" type="checkbox" ${settings.particles ? "checked" : ""}> Partículas</span></label><label><span><input id="contrast" type="checkbox" ${settings.highContrast ? "checked" : ""}> Alto contraste</span></label></div><div class="panel-actions"><button id="settingsBack" class="primary">Voltar</button></div>`;
+    `<div class="settings-grid"><label>Qualidade gráfica<select id="quality"><option value="low">Leve</option><option value="medium">Equilibrada</option><option value="high">Alta</option></select></label><label>Volume da música<input id="music" type="range" min="0" max="1" step=".05" value="${settings.music}"></label><label>Volume dos efeitos<input id="sound" type="range" min="0" max="1" step=".05" value="${settings.effects}"></label><label><span><input id="flashes" type="checkbox" ${settings.flashes ? "checked" : ""}> Feedback de dano</span></label><label><span><input id="particles" type="checkbox" ${settings.particles ? "checked" : ""}> Partículas</span></label><label><span><input id="contrast" type="checkbox" ${settings.highContrast ? "checked" : ""}> Alto contraste</span></label></div><div class="panel-actions"><button id="progressOpen">Backup do progresso</button><button id="settingsBack" class="primary">Voltar</button></div>`;
+  $("progressOpen").onclick = showProgress;
   $("quality").value = settings.quality;
   $("quality").onchange = (e) => {
     settings.quality = e.target.value;
@@ -600,7 +735,7 @@ function showPause() {
 }
 function updateSaveLabel() {
   $("saveInfo").textContent = recovery
-    ? "Save inválido preservado. Novo fio preparado."
+    ? "Progresso recuperado. Exporte uma cópia em Configurações."
     : state.run
       ? `Continuar tentativa · Câmara ${state.run.room}/12 · ${WEAPONS[state.run.weapon].name}`
       : `${state.meta.attempts} tentativas · ${state.meta.shards} fragmentos permanentes`;
@@ -625,6 +760,19 @@ function updateHUD() {
   $("manaText").textContent = `${Math.floor(h.mana)} / ${h.maxMana}`;
   $("manaFill").style.width = (h.mana / h.maxMana) * 100 + "%";
   $("weaponName").textContent = WEAPONS[weapon].name;
+  $("specialStatus").textContent =
+    h.special > 0
+      ? `Recarga ${h.special.toFixed(1)}s`
+      : h.mana < 8
+        ? "Magia insuficiente"
+        : "Pronto · 8 magia";
+  $("castStatus").textContent =
+    h.cast > 0
+      ? `Recarga ${h.cast.toFixed(1)}s`
+      : h.mana < 20
+        ? "Magia insuficiente"
+        : "Pronto · 20 magia";
+  $("dashStatus").textContent = `${h.dashes}/2 cargas · Shift: correr`;
   $("coins").textContent = `◇ ${state.run?.coins || 0}`;
   $("shards").textContent = `✦ ${state.run?.shards || state.meta.shards}`;
   $("dashPips").innerHTML = [0, 1]
